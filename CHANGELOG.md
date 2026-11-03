@@ -8,6 +8,7 @@
 - Read logical item inventory through the paginated native SDK API and combine flat and embedded revision collections when loading full histories.
 - Match native item counts that include deleted tombstones, then exclude inactive items before reading histories or showing candidates. Retain count and page-coverage checks.
 - Record the active workspace and complete folder/item/revision totals in local scan diagnostics.
+- Use the SDK's seconds-based wait parameter for a 60-second result timeout.
 
 ## 0.1.2 — 3 November 2026
 

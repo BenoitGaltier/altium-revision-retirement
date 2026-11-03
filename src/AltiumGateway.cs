@@ -38,7 +38,8 @@ namespace AltiumRevisionRetirement
         }
         static void Check(IEDM_AsyncBasicResult result)
         {
-            if(result==null || !result.WaitUntilDone(60000)) throw new InvalidOperationException("Altium returned no response or timed out. No automatic retry was attempted.");
+            // The native SDK expresses this timeout in seconds.
+            if(result==null || !result.WaitUntilDone(60)) throw new InvalidOperationException("Altium returned no response or timed out. No automatic retry was attempted.");
             var output=result.GetOutput();
             if(output==null || !output.GetSuccess()) throw new InvalidOperationException("Altium rejected the operation: "+(output==null ? "no response": output.GetMessage()));
             var records=result.GetResult();
