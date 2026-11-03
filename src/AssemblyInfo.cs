@@ -6,5 +6,5 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyProduct("Altium Revision Retirement")]
 [assembly: ComVisible(true)]
 [assembly: Guid("0a68acf8-0bbb-4277-8d43-dc410d9a04af")]
-[assembly: AssemblyVersion("0.1.0.0")]
-[assembly: AssemblyFileVersion("0.1.0.0")]
+[assembly: AssemblyVersion("0.1.1.0")]
+[assembly: AssemblyFileVersion("0.1.1.0")]

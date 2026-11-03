@@ -2,7 +2,7 @@
 
 Extension C# **autonome**, chargée directement dans Altium Designer, pour passer les anciennes révisions de **composants, symboles et footprints** à l'état **Obsolete** dans le workspace actif. Elle ne dépend d'aucun bridge, serveur local ou application compagnon.
 
-**Version 0.1.0 de prévalidation** : compilation native réussie avec Altium Designer Agile 26.11.1.28 / SDK C# 4.0 / .NET Framework 4.8. Les tests automatisés utilisent une base simulée. L'installation et les transitions sur un vrai workspace restent à vérifier avec la [procédure de validation](docs/VALIDATION.md). Aucun lifecycle de production n'a été modifié pendant le développement.
+**Version 0.1.1 de prévalidation** : compilation native réussie avec Altium Designer Agile 26.11.1.28 / SDK C# 4.0 / .NET Framework 4.8. L'installation et l'ouverture de la fenêtre avec le logo Fluidra et la description anglaise ont été vérifiées dans Altium Designer. Les tests automatisés utilisent une base simulée. Les analyses complètes et transitions sur un vrai workspace restent à vérifier avec la [procédure de validation](docs/VALIDATION.md). Aucune transition de lifecycle de production n'a été exécutée par l'installation ou ces contrôles.
 
 ## Installation
 
@@ -13,9 +13,11 @@ Prérequis : Windows x64, Altium Designer, extension **Altium Developer** et SDK
 .\scripts\build.ps1
 ```
 
-Ouvrir ensuite **`AltiumRevisionRetirement.local.EPD`** dans Altium Designer, puis utiliser **Install Extension / Update Local Installation** dans Altium Developer. Redémarrer Designer pour charger l'extension. Si Developer modifie la configuration de sortie du projet, le recompiler.
+Ouvrir ensuite **`AltiumRevisionRetirement.local.EPD`** dans Altium Designer, puis utiliser **Install Extension / Update Local Installation** dans Altium Developer. Fermer ensuite Designer normalement, relancer `scripts/build.ps1`, puis exécuter **`scripts/install.ps1`** pour copier les DLL et configurer le logo et la description. Redémarrer Designer pour charger l'extension. Le build conserve une sortie locale même si Developer réécrit le chemin de sortie du projet.
 
 Ouvrir **DXP → Revision Retirement…**, ou **Tools → Revision Retirement…** dans un éditeur schématique/PCB. Le process **`AltiumRevisionRetirement:Manage`** via **Run Process** reste disponible. Les DLL du SDK et le ticket proviennent uniquement de l'installation locale et ne sont pas stockés dans GitHub. Le fichier EPD suivi par Git est un modèle : le build produit le fichier `.local.EPD` avec les chemins résolus.
+
+Le [guide utilisateur complet en anglais](docs/USER_GUIDE.md) couvre l'installation, les contrôles, le workflow, les erreurs et la désinstallation. Il est aussi accessible depuis le bandeau de l'extension.
 
 ## Utilisation
 

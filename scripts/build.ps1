@@ -13,12 +13,16 @@ foreach($file in @('CSharp\Altium.SDK.dll','..\Altium.SDK.Interfaces.dll','SDK.t
     if(-not (Test-Path -LiteralPath (Join-Path $AltiumSdkRoot $file))) {throw "Missing licensed Altium SDK file: $file"}
 }
 $msbuild=Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\MSBuild.exe'
-& $msbuild (Join-Path $project 'AltiumRevisionRetirement.csproj') /t:Rebuild /p:Configuration=Release "/p:AltiumSdkRoot=$AltiumSdkRoot" /nologo /verbosity:minimal
+$localOutput=Join-Path $project 'bin\Release\'
+& $msbuild (Join-Path $project 'AltiumRevisionRetirement.csproj') /t:Rebuild /p:Configuration=Release "/p:AltiumSdkRoot=$AltiumSdkRoot" "/p:OutputPath=$localOutput" /nologo /verbosity:minimal
 if($LASTEXITCODE -ne 0) {throw 'Extension build failed.'}
 # A local EPD has the complete Developer schema and paths resolved for this installation.
 [xml]$epd=Get-Content -LiteralPath (Join-Path $project 'AltiumRevisionRetirement.EPD') -Raw
 $epd.Main.ExtensionOptions.ExtensionSourceLocation=$project
-$epd.Main.ExtensionVersionOptions.ExtensionTopLevelFolder=(Join-Path $project 'bin\Release')
+$extensionRoot=Split-Path -Parent (Split-Path -Parent $AltiumSdkRoot)
+$epd.Main.ExtensionVersionOptions.ExtensionTopLevelFolder=(Join-Path $extensionRoot 'AltiumRevisionRetirement')
 $epd.Main.ExtensionVersionOptions.ExtensionSDKTicket=(Join-Path $AltiumSdkRoot 'SDK.ticket')
+$epd.Main.ExtensionVersionOptions.ExtensionSmallIcon=(Join-Path $project 'assets\fluidra-extension-small.png')
+$epd.Main.ExtensionVersionOptions.ExtensionLargeIcon=(Join-Path $project 'assets\fluidra-extension-large.png')
 $epd.Save((Join-Path $project 'AltiumRevisionRetirement.local.EPD'))
 Write-Output "Built native extension and local EPD in $project"

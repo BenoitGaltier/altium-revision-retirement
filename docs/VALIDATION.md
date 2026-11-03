@@ -4,13 +4,14 @@
 
 - Full Release build against local Designer Agile 26.11.1.28 / SDK 4.0 / .NET Framework 4.8, with warnings treated as errors.
 - 33 isolated safety-engine tests: latest GUID handling, arbitrary revision labels, hidden/single revisions, lifecycle ambiguity, permissions, stale snapshots, workspace/user switches, dependency ordering and cycles, audit failures, interrupted/lost responses, postconditions and cancellation.
-- No live workspace lifecycle transition was executed. Installation, real inventory completeness, ACL enforcement and native lifecycle rule validation remain pending.
+- Version 0.1.1 was registered through the native Altium Developer EPD workflow, deployed with verified DLL hashes, and loaded into the running Designer process. The window opened with the embedded Fluidra logo, English description and guide link. Only this extension's display metadata was updated; other registrations were preserved.
+- No live workspace lifecycle transition was executed by the installer or verification. Real inventory completeness, ACL enforcement and native lifecycle rule validation remain pending.
 
 ## Required before production use
 
 Use a disposable workspace or test folder with components and models created specifically for this validation. Record all item/revision GUIDs and lifecycle states in Explorer before starting. Test the same Altium version and workspace plan used in production.
 
-1. Build, open the generated `.local.EPD`, install through Altium Developer and restart. Verify that `AltiumRevisionRetirement:Manage` opens and closes without creating a server/listener or modifying workspace data.
+1. Build, open the generated `.local.EPD`, register through Altium Developer, close Designer, rebuild, run `scripts/install.ps1`, and restart. Verify that `AltiumRevisionRetirement:Manage` opens and closes without creating a server/listener or modifying workspace data.
 2. Create components, symbols and footprints with one revision and with at least three revisions. Give revision labels that do not sort lexically (for example 9 and 10, or structured schemes). Include hidden/inapplicable latest revisions and an unreleased/planned latest revision.
 3. Compare every row to Explorer's full revision history. Verify latest means the true newest revision, including the planned/hidden cases. A single-revision item must not appear. An already Obsolete old revision must not appear.
 4. Check older revisions with no Obsolete state, an ambiguous Obsolete name, no direct transition, an unreleased status and insufficient permissions. They must be listed with a blocking reason and must not be selectable.

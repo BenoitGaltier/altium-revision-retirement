@@ -13,6 +13,7 @@
     <Reference Include="Altium.SDK.Interfaces"><HintPath>$(AltiumSdkRoot)\..\Altium.SDK.Interfaces.dll</HintPath><Private>true</Private></Reference>
     <Reference Include="System"/><Reference Include="System.Core"/><Reference Include="System.Drawing"/><Reference Include="System.Windows.Forms"/>
     <Compile Include="src\*.cs"/>
+    <EmbeddedResource Include="assets\fluidra-logo.png"><LogicalName>AltiumRevisionRetirement.FluidraLogo.png</LogicalName></EmbeddedResource>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets"/>
   <Target Name="AfterBuild"><Copy SourceFiles="Installation\AltiumRevisionRetirement.ins;Installation\AltiumRevisionRetirement.rcs" DestinationFolder="$(OutputPath)"/></Target>

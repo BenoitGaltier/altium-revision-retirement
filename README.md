@@ -2,9 +2,9 @@
 
 Standalone C# extension loaded directly into Altium Designer. It finds superseded **component, schematic symbol and PCB footprint revisions** in the active workspace, lets you select them individually or together, and requests their existing lifecycle transition to **Obsolete**.
 
-No bridge, companion application, local web server or separately stored Altium credentials. The interface is in French. [Documentation française](README.fr.md).
+No bridge, companion application, local web server or separately stored Altium credentials. The Fluidra header explains the extension in English; the action controls remain in French. [English user guide](docs/USER_GUIDE.md) · [Documentation française](README.fr.md).
 
-**Version 0.1.0 — preview.** Native compilation was verified with the installed Altium Designer Agile 26.11.1.28 / C# SDK 4.0 and .NET Framework 4.8. Safety tests use an isolated fake gateway. Installation, real workspace enumeration and real lifecycle transitions still require the [sandbox acceptance procedure](docs/VALIDATION.md); no production lifecycle was changed during development. This is an independent extension, not an Altium-certified product.
+**Version 0.1.1 — preview.** Native compilation, installation and opening the branded window were verified with Altium Designer 26.11.1.28 / C# SDK 4.0 / .NET Framework 4.8. The Fluidra logo, English header and English guide link were visible in the running Designer process. Safety tests use an isolated fake gateway. Real workspace enumeration and lifecycle transitions still require the [sandbox acceptance procedure](docs/VALIDATION.md); no production lifecycle transition was performed by the installer or these checks. This is an independent extension, not an Altium-certified product.
 
 ## Build and install
 
@@ -17,10 +17,12 @@ Requirements: Windows x64, Altium Designer with the licensed **Altium Developer*
 
 The build detects the newest installed Designer SDK through the Windows registry. You can supply `-AltiumSdkRoot 'C:\...\SDK4.0'` to target another installation. Build output stays inside `bin\Release`; it does not install anything or change Altium's registry.
 
-1. In Altium Designer, open the generated **`AltiumRevisionRetirement.local.EPD`**. The tracked `AltiumRevisionRetirement.EPD` is a template; build first to resolve all paths.
-2. Use **Install Extension** / **Update Local Installation** in Altium Developer. Follow Altium's restart requirement. If Developer rewrites the project's output configuration, rebuild it.
-3. Restart Designer to load the extension.
-4. Use **DXP → Revision Retirement…**, or **Tools → Revision Retirement…** in a schematic/PCB editor. The RCS declares these menu entries using native resource IDs. The fallback is **Run Process** with **`AltiumRevisionRetirement:Manage`**. No document needs to be modified.
+1. In Altium Designer, open the generated **`AltiumRevisionRetirement.local.EPD`**. The tracked EPD is a template; build first to resolve all paths.
+2. Use **Install Extension** / **Update Local Installation** in Altium Developer, then close Designer normally.
+3. Run `scripts/build.ps1` again, then **`scripts/install.ps1`**. The installer copies and verifies runtime files in the registered extension folder, backs up the local registry and fills only this extension's English description, guide link and Fluidra thumbnails. Other extension registrations are checked for changes.
+4. Restart Designer. Use **DXP → Revision Retirement…**, or **Tools → Revision Retirement…** in a schematic/PCB editor. The fallback is **Run Process** with **`AltiumRevisionRetirement:Manage`**.
+
+The build keeps output in `bin\Release` even if Altium Developer rewrites the project output path. The install script requires Designer to be closed and never closes user documents itself. See the [English user guide](docs/USER_GUIDE.md) for the full installation, control translations, operating workflow, troubleshooting, updates and removal.
 
 SDK assemblies are resolved from your licensed local installation during the build. Neither those assemblies nor your SDK ticket are committed or included in the source ZIP. See [Altium's Developer installation workflow](https://www.altium.com/documentation/altium-dxp-developer).
 
@@ -55,6 +57,7 @@ See [safety design and limitations](docs/SAFETY.md), [validation checklist](docs
 ```powershell
 .\scripts\test.ps1      # safety engine, no Altium login or SDK needed
 .\scripts\build.ps1     # full native extension, licensed local SDK required
+.\scripts\install.ps1   # stage runtime + display metadata after native EPD registration, Designer closed
 .\scripts\package.ps1   # tested source ZIP + SHA-256, SDK files excluded
 ```
 
