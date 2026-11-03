@@ -12,3 +12,6 @@ jobs:
       - name: Run isolated safety engine tests
         shell: powershell
         run: .\scripts\test.ps1
+      - name: Verify English interface and selection controls
+        shell: powershell
+        run: .\scripts\test-ui.ps1

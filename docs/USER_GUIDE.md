@@ -34,20 +34,20 @@ The extension's runtime files are stored in the Altium installation's `Extension
 
 ## Window and controls
 
-The interface controls remain in French. The product description and this guide are in English.
+All extension controls, status messages, validation errors and confirmation text are in English. Item names, revision identifiers and lifecycle names remain exactly as defined in the workspace.
 
 | Control | Meaning |
 | --- | --- |
-| **Analyser** | Scan the active workspace. This is read-only. |
-| **Choisir** | Select one old revision. |
-| **Tout sélectionner** | Select all listed revisions with a valid direct transition. |
-| **Tout désélectionner** | Clear the selection. |
-| **Ancienne révision** | The superseded revision that may be changed. |
-| **État actuel** | Its current lifecycle state. |
-| **Dernière protégée** | The latest revision, which is excluded from the operation. |
-| **Disponibilité** | Eligibility or the reason a row is blocked. |
-| **Passer la sélection à Obsolete…** | Validate the selection and review the proposed transitions. |
-| **Arrêter** | Stop between operations. Completed transitions remain applied. |
+| **Scan** | Scan the active workspace. This is read-only. |
+| **Select** | Select one old revision. |
+| **Select all** | Select all listed revisions with a valid direct transition. |
+| **Clear selection** | Clear the selection. |
+| **Old revision** | The superseded revision that may be changed. |
+| **Current state** | Its current lifecycle state. |
+| **Protected latest** | The latest revision, which is excluded from the operation. |
+| **Availability** | Eligibility or the reason a row is blocked. |
+| **Set selected revisions to Obsolete…** | Validate the selection and review the proposed transitions. |
+| **Stop** | Stop between operations. Completed transitions remain applied. |
 | **User guide (English)** | Open this guide. |
 
 ![Extension preview with sample data](ui-preview.png)
@@ -55,11 +55,11 @@ The interface controls remain in French. The product description and this guide 
 ## Review and retire revisions
 
 1. Connect to the intended workspace in Designer. Open the extension and check the workspace name and URL.
-2. Click **Analyser**. The scan lists old revisions whose state is not named `Obsolete`. Single-revision items and the latest revision of every item are excluded. Hidden latest revisions are also protected.
+2. Click **Scan**. The scan lists old revisions whose state is not named `Obsolete`. Single-revision items and the latest revision of every item are excluded. Hidden latest revisions are also protected.
 3. Review the item, revision, current state and protected latest revision. A blocked row stays visible so you can see why it cannot be changed. Typical reasons include missing write permissions, an unpublished/planned revision, an absent or ambiguous Obsolete state, or no direct lifecycle transition.
-4. Select the revisions to retire. **Tout sélectionner** selects eligible rows; it does not bypass the dependency checks.
-5. Click **Passer la sélection à Obsolete…**. The extension rereads the items and their parent references. If a symbol or footprint is still referenced by a non-Obsolete parent, the operation stops unless that old parent is also explicitly selected and eligible. A latest parent is never added to the selection.
-6. Review the ordered plan. Selected parents appear before their models. Enter a short note explaining the change, then click **Confirmer**. Closing or cancelling this dialog applies no transition.
+4. Select the revisions to retire. **Select all** selects eligible rows; it does not bypass the dependency checks.
+5. Click **Set selected revisions to Obsolete…**. The extension rereads the items and their parent references. If a symbol or footprint is still referenced by a non-Obsolete parent, the operation stops unless that old parent is also explicitly selected and eligible. A latest parent is never added to the selection.
+6. Review the ordered plan. Selected parents appear before their models. Enter a short note explaining the change, then click **Confirm**. Closing or cancelling this dialog applies no transition.
 7. Review the result and run another scan to refresh the list.
 
 For example, if component revision `COMP-001-02` is the latest and still uses `SYM-001-01`, that symbol revision is protected by the parent reference. The extension does not retire the latest component or replace its symbol automatically. If an eligible old component revision is the only non-Obsolete parent of an old symbol, explicitly selecting both allows the component to be processed first.
@@ -89,6 +89,8 @@ The batch stops on the first rejected or uncertain operation. It does not retry 
 | Installer says Altium is still running | Close Designer normally before updating; do not force-terminate it. |
 | Source project changed after opening the EPD | Altium Developer may rewrite its output path. The build script overrides that path so runtime output still goes into `bin\Release`. |
 | Description or logo is missing from Installed extensions | Close Designer, rerun the build and install scripts, and restart. The script fills only this extension's display metadata. |
+
+A local scan status report is available at `%LOCALAPPDATA%\AltiumRevisionRetirement\Diagnostics\last-scan.txt`. It records whether a scan is running, succeeded, failed or was cancelled, with its progress and any error details. It does not change workspace data and is not included in Git.
 
 ## Updates and removal
 

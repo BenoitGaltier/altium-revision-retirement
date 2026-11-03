@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.2 — 3 November 2026
+
+- Fix the native scan error `No folders specified`: remove the synthetic empty root folder and query only actual folder GUIDs returned by Altium.
+- Move inventory enumeration into a tested coordinator with explicit GUID validation, duplicate detection and complete-response checks. Cross-check zero counts against native item queries and use Altium-formatted uppercase GUIDs at the SDK boundary.
+- Translate all controls, columns, status messages, eligibility reasons, errors and confirmation text to English.
+- Add local scan diagnostics and regression tests for folder queries and the English interface.
 ## 0.1.1 — 3 November 2026
 
 - Add the official Fluidra wordmark and an English explanation of workspace scope and latest-revision protection in the main window.

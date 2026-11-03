@@ -2,9 +2,9 @@
 
 Standalone C# extension loaded directly into Altium Designer. It finds superseded **component, schematic symbol and PCB footprint revisions** in the active workspace, lets you select them individually or together, and requests their existing lifecycle transition to **Obsolete**.
 
-No bridge, companion application, local web server or separately stored Altium credentials. The Fluidra header explains the extension in English; the action controls remain in French. [English user guide](docs/USER_GUIDE.md) · [Documentation française](README.fr.md).
+No bridge, companion application, local web server or separately stored Altium credentials. The full interface, validation messages and confirmation dialog are in English. [English user guide](docs/USER_GUIDE.md) · [Documentation française](README.fr.md).
 
-**Version 0.1.1 — preview.** Native compilation, installation and opening the branded window were verified with Altium Designer 26.11.1.28 / C# SDK 4.0 / .NET Framework 4.8. The Fluidra logo, English header and English guide link were visible in the running Designer process. Safety tests use an isolated fake gateway. Real workspace enumeration and lifecycle transitions still require the [sandbox acceptance procedure](docs/VALIDATION.md); no production lifecycle transition was performed by the installer or these checks. This is an independent extension, not an Altium-certified product.
+**Version 0.1.2 — preview.** Native compilation, installation and opening the branded window were verified with Altium Designer 26.11.1.28 / C# SDK 4.0 / .NET Framework 4.8. The Fluidra logo, English header and English guide link were visible in the running Designer process. Safety tests use an isolated fake gateway. Real workspace enumeration and lifecycle transitions still require the [sandbox acceptance procedure](docs/VALIDATION.md); no production lifecycle transition was performed by the installer or these checks. This is an independent extension, not an Altium-certified product.
 
 ## Build and install
 
@@ -31,11 +31,11 @@ SDK assemblies are resolved from your licensed local installation during the bui
 ## Use
 
 1. Connect to the intended workspace in Designer.
-2. Choose **Analyser**. This reads the workspace and displays only revisions other than the native latest revision whose current state is not named `Obsolete`. Planned revisions, insufficient permissions and missing/ambiguous direct transitions remain visible with a blocking reason.
-3. Select individual rows or **Tout sélectionner** (all rows with a valid direct transition). The latest revision of every item is excluded even if hidden, planned or already Obsolete.
-4. Choose **Passer la sélection à Obsolete…**. The extension rereads the selected items and dependencies. A referenced symbol/footprint cannot be retired while a parent revision remains non-Obsolete. Select an eligible old parent revision as well, or leave the model unchanged. A latest parent is never added automatically.
+2. Choose **Scan**. This reads the workspace and displays only revisions other than the native latest revision whose current state is not named `Obsolete`. Planned revisions, insufficient permissions and missing/ambiguous direct transitions remain visible with a blocking reason.
+3. Select individual rows or **Select all** (all rows with a valid direct transition). The latest revision of every item is excluded even if hidden, planned or already Obsolete.
+4. Choose **Set selected revisions to Obsolete…**. The extension rereads the selected items and dependencies. A referenced symbol/footprint cannot be retired while a parent revision remains non-Obsolete. Select an eligible old parent revision as well, or leave the model unchanged. A latest parent is never added automatically.
 5. Review the ordered plan, enter a mandatory lifecycle change note, and confirm. Parents are processed before their selected models. There is no cascade or automatic multi-step lifecycle route.
-6. Review the result and rescan. **Arrêter** stops between operations; it does not undo successful transitions.
+6. Review the result and rescan. **Stop** stops between operations; it does not undo successful transitions.
 
 A flushed CSV journal is written to `%LOCALAPPDATA%\AltiumRevisionRetirement\Audit`. Each attempted change has an `intent` entry before the SDK write and a `verified` entry after a fresh read. If a response is lost, the batch stops without retrying. Check the revision's native Altium timeline before any manual retry.
 
@@ -61,4 +61,4 @@ See [safety design and limitations](docs/SAFETY.md), [validation checklist](docs
 .\scripts\package.ps1   # tested source ZIP + SHA-256, SDK files excluded
 ```
 
-GitHub Actions runs the safety suite on Windows. It does not compile the licensed native adapter or exercise a connected workspace. `src/AltiumGateway.cs` owns all SDK access; `src/RetirementEngine.cs` owns eligibility, dependency order and latest-revision guards. `src/RetirementForm.cs` owns selection and the confirmation dialog.
+GitHub Actions runs the safety, folder-inventory and English-interface tests on Windows. It does not compile the licensed native adapter or exercise a connected workspace. `src/AltiumGateway.cs` owns all SDK access; `src/RetirementEngine.cs` owns eligibility, dependency order and latest-revision guards. `src/RetirementForm.cs` owns selection and the confirmation dialog.

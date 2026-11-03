@@ -112,7 +112,8 @@ static class SafetyTests
             Test("latest state postcondition detects unexpected side effect",()=>{var f=Fixture();var p=new RetirementEngine(f).Prepare(Scan(f));f.OnWrite=()=>f.Items[0].Revisions[1].StateGuid=G();Reject(()=>Execute(f,p,new Journal()));});
             Test("latest rechecked during preflight",()=>{var f=Fixture();var c=Scan(f);f.OnRead=()=>{f.Items[0].LatestGuid=f.Items[0].Revisions[0].Guid;};Reject(()=>new RetirementEngine(f).Prepare(c));Assert(f.Writes.Count==0,"Latest guard missing");});
             Test("successful transition emits intent and verified",()=>{var f=Fixture();var p=new RetirementEngine(f).Prepare(Scan(f));var j=new Journal();Assert(Execute(f,p,j)==1,"Transition failed");Assert(j.Events.SequenceEqual(new[]{"intent","verified"}),"Audit ordering");Assert(f.Writes.Single()!=f.Items[0].LatestGuid,"Latest written");});
-            Console.WriteLine(passed+" safety tests passed; no live workspace used.");return 0;
+            FolderInventoryTests.Run(Test);
+            Console.WriteLine(passed+" safety and inventory tests passed; no live workspace used.");return 0;
         }
         catch(Exception ex) {Console.Error.WriteLine(ex);return 1;}
     }

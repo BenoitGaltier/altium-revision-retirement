@@ -3,8 +3,9 @@
 ## Verified during development
 
 - Full Release build against local Designer Agile 26.11.1.28 / SDK 4.0 / .NET Framework 4.8, with warnings treated as errors.
-- 33 isolated safety-engine tests: latest GUID handling, arbitrary revision labels, hidden/single revisions, lifecycle ambiguity, permissions, stale snapshots, workspace/user switches, dependency ordering and cycles, audit failures, interrupted/lost responses, postconditions and cancellation.
-- Version 0.1.1 was registered through the native Altium Developer EPD workflow, deployed with verified DLL hashes, and loaded into the running Designer process. The window opened with the embedded Fluidra logo, English description and guide link. Only this extension's display metadata was updated; other registrations were preserved.
+- 44 isolated safety and inventory tests: latest GUID handling, arbitrary revision labels, hidden/single revisions, lifecycle ambiguity, permissions, stale snapshots, workspace/user switches, dependency ordering and cycles, audit failures, interrupted/lost responses, postconditions and cancellation.
+- Version 0.1.2 was registered through the native Altium Developer EPD workflow, deployed with verified DLL hashes, and loaded into the running Designer process. The window opened with the embedded Fluidra logo, English description and guide link. Only this extension's display metadata was updated; other registrations were preserved.
+- Inventory regressions cover real folder GUIDs, no synthetic empty root query, empty folders, duplicate identifiers, truncated responses and count changes, uppercase native GUIDs and false zero counts. English UI tests cover the main window, selection controls and confirmation dialog.
 - No live workspace lifecycle transition was executed by the installer or verification. Real inventory completeness, ACL enforcement and native lifecycle rule validation remain pending.
 
 ## Required before production use
