@@ -4,9 +4,10 @@
 
 - Full Release build against local Designer Agile 26.11.1.28 / SDK 4.0 / .NET Framework 4.8, with warnings treated as errors.
 - 63 isolated safety and inventory tests: latest GUID handling, arbitrary revision labels, hidden/single revisions, lifecycle ambiguity, permissions, stale snapshots, workspace/user switches, dependency ordering and cycles, audit failures, interrupted/lost responses, postconditions and cancellation.
-- Version 0.1.2 was registered through the native Altium Developer EPD workflow, deployed with verified DLL hashes, and loaded into the running Designer process. The window opened with the embedded Fluidra logo, English description and guide link. Only this extension's display metadata was updated; other registrations were preserved.
+- The extension was registered through the native Altium Developer EPD workflow and version 0.1.3 was deployed with verified DLL hashes and loaded into the running Designer process. The window opened with the embedded Fluidra logo, English description and guide link. Only this extension's display metadata was updated; other registrations were preserved.
 - Inventory regressions cover the explicit Components root, nested SDK SubFolder objects, deep parent chains, real folder GUIDs, no synthetic empty root query, empty folders, duplicate identifiers, truncated responses and count changes, uppercase native GUIDs and false zero counts. Page coverage tests include native first-page aliases, repeated pages and empty responses. English UI tests cover the main window, selection controls and confirmation dialog.
-- No live workspace lifecycle transition was executed by the installer or verification. Real inventory completeness, ACL enforcement and native lifecycle rule validation remain pending.
+- A read-only native scan completed through the connected workspace's Components hierarchy and full item histories. It returned superseded Draft revisions for components, symbols and footprints, with the protected latest revision shown separately. Native diagnostics confirmed that deleted tombstones account for the difference between the folder count and the ExcludeDeleted listing; the verified inventory excludes them before reading histories.
+- No live workspace lifecycle transition was executed by the installer or verification. Independent reconciliation against Explorer, ACL enforcement and native lifecycle rule validation remain part of the acceptance procedure below.
 
 ## Required before production use
 

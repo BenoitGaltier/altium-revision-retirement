@@ -2,7 +2,7 @@
 
 Extension C# **autonome**, chargée directement dans Altium Designer, pour passer les anciennes révisions de **composants, symboles et footprints** à l'état **Obsolete** dans le workspace actif. Elle ne dépend d'aucun bridge, serveur local ou application compagnon.
 
-**Version 0.1.3 de prévalidation** : compilation native réussie avec Altium Designer Agile 26.11.1.28 / SDK C# 4.0 / .NET Framework 4.8. L'installation et l'ouverture de la fenêtre avec le logo Fluidra et la description anglaise ont été vérifiées dans Altium Designer. Les tests automatisés utilisent une base simulée. Les analyses complètes et transitions sur un vrai workspace restent à vérifier avec la [procédure de validation](docs/VALIDATION.md). Aucune transition de lifecycle de production n'a été exécutée par l'installation ou ces contrôles.
+**Version 0.1.3 de prévalidation** : compilation, installation et scan natif en lecture seule vérifiés avec Altium Designer Agile 26.11.1.28 / SDK C# 4.0 / .NET Framework 4.8. Le scan parcourt l'arborescence Components et remonte des anciennes révisions Draft de composants, symboles et footprints. Le logo Fluidra, l'interface anglaise et le lien vers le guide sont visibles dans Altium Designer. Les tests automatisés utilisent une base simulée. Les transitions natives restent à vérifier avec la [procédure de validation](docs/VALIDATION.md). Aucune transition de lifecycle réelle n'a été exécutée par l'installation ou ces contrôles.
 
 ## Installation
 

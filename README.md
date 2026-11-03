@@ -4,7 +4,7 @@ Standalone C# extension loaded directly into Altium Designer. It finds supersede
 
 No bridge, companion application, local web server or separately stored Altium credentials. The full interface, validation messages and confirmation dialog are in English. [English user guide](docs/USER_GUIDE.md) · [Documentation française](README.fr.md).
 
-**Version 0.1.3 — preview.** Native compilation, installation and opening the branded window were verified with Altium Designer 26.11.1.28 / C# SDK 4.0 / .NET Framework 4.8. The Fluidra logo, English header and English guide link were visible in the running Designer process. Safety tests use an isolated fake gateway. Real workspace enumeration and lifecycle transitions still require the [sandbox acceptance procedure](docs/VALIDATION.md); no production lifecycle transition was performed by the installer or these checks. This is an independent extension, not an Altium-certified product.
+**Version 0.1.3 — preview.** Native compilation, installation and read-only scanning were verified with Altium Designer 26.11.1.28 / C# SDK 4.0 / .NET Framework 4.8. The scan traversed the Components hierarchy and returned superseded Draft revisions for components, symbols and footprints. The Fluidra logo, English interface and guide link were visible in the running Designer process. Safety tests use an isolated fake gateway. Native lifecycle writes still require the [sandbox acceptance procedure](docs/VALIDATION.md); no live lifecycle transition was performed by the installer or these checks. This is an independent extension, not an Altium-certified product.
 
 ## Build and install
 

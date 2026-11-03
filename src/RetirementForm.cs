@@ -97,14 +97,15 @@ namespace AltiumRevisionRetirement
             {
                 var w=gateway.ActiveWorkspace(); workspace.Text="Active workspace: "+w.Name+Environment.NewLine+w.Url;
                 scanDiagnostics.Workspace(w);
-                var result=new RetirementEngine(gateway).Scan(Progress);
+                string inventorySummary=null;
+                var result=new RetirementEngine(gateway).Scan(message=>{inventorySummary=message;Progress(message);});
                 foreach(var c in result)
                 {
                     int index=grid.Rows.Add(false,c.Kind,c.ItemHrid,c.RevisionHrid,c.BeforeName,c.LatestHrid,c.Name,c.Selectable ? "Direct transition available; dependencies will be checked before applying": c.Reason);
                     grid.Rows[index].Tag=c;
                     if(!c.Selectable) {grid.Rows[index].DefaultCellStyle.ForeColor=Color.DimGray;grid.Rows[index].Cells[0].ReadOnly=true;}
                 }
-                status.Text="Scan completed. No workspace data was changed.";
+                status.Text=inventorySummary??"Scan completed. No workspace data was changed.";
                 scanDiagnostics.Complete(result);
             }
             catch(Exception ex) {scanDiagnostics.Failed(ex);ShowError(ex);}
