@@ -1,0 +1,14 @@
+name: Safety tests
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  safety:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run isolated safety engine tests
+        shell: powershell
+        run: .\scripts\test.ps1

@@ -1,0 +1,18 @@
+PL
+    PLRevisionRetirement:Manage
+    Command='AltiumRevisionRetirement:Manage'
+    Caption='Revision Retirement...'
+    Description='Review superseded workspace revisions and transition selected revisions to Obsolete'
+End
+
+Insertion MNRevisionRetirementSystem TargetID='MNSystemMenu' InsertType=After RefID0='MNSystemMenu100'
+    Link MNRevisionRetirementSystemManage PLID='PLRevisionRetirement:Manage' End
+End
+
+Insertion MNRevisionRetirementSchematic TargetID='MNSchematic_Tools10'
+    Link MNRevisionRetirementSchematicManage PLID='PLRevisionRetirement:Manage' End
+End
+
+Insertion MNRevisionRetirementPcb TargetID='MNPCB_Tools10'
+    Link MNRevisionRetirementPcbManage PLID='PLRevisionRetirement:Manage' End
+End

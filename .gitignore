@@ -1,0 +1,9 @@
+bin/
+obj/
+dist/
+.artifacts/
+*.user
+*.suo
+*.local.EPD
+SDK.ticket
+Altium.SDK*.dll

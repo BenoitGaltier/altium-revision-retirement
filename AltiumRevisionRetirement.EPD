@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Main>
+  <ExtensionServerOptions>
+    <Login/><Password/><ServiceURL/><PublishToGlobalExtensionServer>false</PublishToGlobalExtensionServer><VaultGUID/>
+  </ExtensionServerOptions>
+  <ExtensionOptions>
+    <ExtensionHRID>AltiumRevisionRetirement</ExtensionHRID><ExtensionKind>ADServer</ExtensionKind>
+    <ExtensionSourceLocation>__PROJECT_ROOT__</ExtensionSourceLocation><ExtensionSourceRelativePath/>
+    <ExtensionLanguage>C#</ExtensionLanguage><ExtensionIDEVersion>Visual Studio 2015</ExtensionIDEVersion>
+    <ExtemsionSDKVersion>4.0.1  (AD 18.0+)</ExtemsionSDKVersion>
+    <ExtensionCategoryGUID>793A1F67-0B22-4E01-A5DE-3176A1E8C60D</ExtensionCategoryGUID><ExtensionCategoryName>Extensions</ExtensionCategoryName>
+    <ExtensionLicensingMode>0</ExtensionLicensingMode><ExtensionPlatform>x64</ExtensionPlatform>
+    <ExtensionIsPublished>false</ExtensionIsPublished><AltiumUpdate>false</AltiumUpdate>
+  </ExtensionOptions>
+  <ExtensionVersionOptions>
+    <ExtensionTitle>Altium Revision Retirement</ExtensionTitle><ExtensionReadMe/><ExtensionKeywords>Lifecycle,Obsolete,Revisions,Workspace</ExtensionKeywords>
+    <ExtensionHelp/><ExtensionRequirements/><ExtensionSmallIcon/><ExtensionLargeIcon/>
+    <ExtensionShortDescription>Safely review and retire superseded workspace revisions.</ExtensionShortDescription>
+    <ExtensionLongDescription>Standalone native extension for components, symbols and footprints. Latest revisions are excluded; existing transitions and dependencies are checked before a lifecycle change.</ExtensionLongDescription>
+    <ExtensionVersion>0.1.0.0</ExtensionVersion><ExtensionLifeCycleGUID/>
+    <ExtensionTopLevelFolder>__BUILD_OUTPUT__</ExtensionTopLevelFolder><ExtensionSDKTicket>__SDK_TICKET__</ExtensionSDKTicket>
+    <ReleaseNote/><ExtensionPublisherName>BenoitGaltier</ExtensionPublisherName>
+  </ExtensionVersionOptions>
+</Main>
