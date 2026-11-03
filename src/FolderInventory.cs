@@ -6,6 +6,13 @@ namespace AltiumRevisionRetirement
 {
     public static class FolderInventory
     {
+        public static IList<string> ActiveItems(IEnumerable<string> inventory,IDictionary<string,bool> active)
+        {
+            var ids=inventory.Select(Id.Of).ToList();
+            if(ids.Any(id=>!active.ContainsKey(id)) || active.Keys.Any(id=>!ids.Contains(Id.Of(id))))
+                throw new InvalidOperationException("The native active-item inventory is incomplete.");
+            return ids.Where(id=>active[id]).ToList();
+        }
         // An empty string is not the vault root: native folder queries require real folder GUIDs.
         public static IList<string> Read(IEnumerable<string> folderGuids, IEnumerable<string> contentTypes,
             Func<string,string,int> count, Func<string,string,IList<string>> read, Action<string> progress)
@@ -23,8 +30,9 @@ namespace AltiumRevisionRetirement
                 var rows=read(folder,type);
                 if(rows==null) throw new InvalidOperationException("Altium returned no inventory response.");
                 var ids=rows.Select(Id.Of).ToList();
-                if(ids.Distinct().Count()!=ids.Count || ids.Count!=before || count(folder,type)!=before)
-                    throw new InvalidOperationException("A folder inventory is incomplete or changed during the scan. Scan again.");
+                int after=count(folder,type),unique=ids.Distinct().Count();
+                if(unique!=ids.Count || ids.Count!=before || after!=before)
+                    throw new InvalidOperationException("Folder inventory verification failed. Expected "+before+" items; received "+ids.Count+" ("+unique+" unique); final count "+after+". Folder "+Id.Native(folder)+", content type "+Id.Native(type)+".");
                 foreach(var id in ids) found.Add(id);
             }
             return found.OrderBy(id=>id,StringComparer.Ordinal).ToList();

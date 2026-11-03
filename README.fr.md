@@ -2,7 +2,7 @@
 
 Extension C# **autonome**, chargée directement dans Altium Designer, pour passer les anciennes révisions de **composants, symboles et footprints** à l'état **Obsolete** dans le workspace actif. Elle ne dépend d'aucun bridge, serveur local ou application compagnon.
 
-**Version 0.1.2 de prévalidation** : compilation native réussie avec Altium Designer Agile 26.11.1.28 / SDK C# 4.0 / .NET Framework 4.8. L'installation et l'ouverture de la fenêtre avec le logo Fluidra et la description anglaise ont été vérifiées dans Altium Designer. Les tests automatisés utilisent une base simulée. Les analyses complètes et transitions sur un vrai workspace restent à vérifier avec la [procédure de validation](docs/VALIDATION.md). Aucune transition de lifecycle de production n'a été exécutée par l'installation ou ces contrôles.
+**Version 0.1.3 de prévalidation** : compilation native réussie avec Altium Designer Agile 26.11.1.28 / SDK C# 4.0 / .NET Framework 4.8. L'installation et l'ouverture de la fenêtre avec le logo Fluidra et la description anglaise ont été vérifiées dans Altium Designer. Les tests automatisés utilisent une base simulée. Les analyses complètes et transitions sur un vrai workspace restent à vérifier avec la [procédure de validation](docs/VALIDATION.md). Aucune transition de lifecycle de production n'a été exécutée par l'installation ou ces contrôles.
 
 ## Installation
 
@@ -25,7 +25,7 @@ L'ensemble des contrôles, états d'avancement, erreurs et confirmations de l'ex
 
 1. Se connecter au workspace voulu dans Altium Designer.
 2. Cliquer sur **Scan** : lecture seule des anciennes révisions dont le lifecycle n'est pas `Obsolete`. Les dernières révisions sont exclues, y compris celles masquées ou planifiées.
-3. Cocher les lignes une par une, ou utiliser **Select all** pour toutes celles possédant une transition directe valide. Les révisions sans droits suffisants, non publiées ou sans transition directe restent visibles avec le motif de blocage.
+3. Cocher les lignes une par une, ou utiliser **Select all** pour toutes celles possédant une transition directe valide. Les révisions sans droits suffisants ou sans transition directe restent visibles avec le motif de blocage.
 4. Cliquer sur **Set selected revisions to Obsolete…**. L'extension relit les données et vérifie les dépendances. Un modèle encore référencé par une révision non Obsolete est protégé : sélectionner aussi cette ancienne révision parente si elle est éligible, ou conserver le modèle. Une dernière révision parente n'est jamais ajoutée automatiquement.
 5. Vérifier le plan, saisir la note de changement obligatoire et confirmer. Les parents sélectionnés passent avant leurs modèles. L'extension ne crée aucune transition et ne contourne pas les droits.
 6. Relancer l'analyse après l'opération. **Stop** interrompt le lot entre deux opérations ; les transitions réussies restent appliquées.

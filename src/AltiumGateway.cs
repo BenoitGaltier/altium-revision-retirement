@@ -12,9 +12,14 @@ namespace AltiumRevisionRetirement
         static TEDMS_VaultFlagSet ReadFlags() { return new TEDMS_VaultFlagSet(TEDMS_VaultFlag.edmsWait,TEDMS_VaultFlag.edmsForceRefresh); }
         static TEDMS_GetOptionSet Options()
         {
-            return new TEDMS_GetOptionSet(TEDMS_GetOption.eGetOption_GetAllItemRevisions,
-                TEDMS_GetOption.eGetOption_IncludeHiddenRevisions,TEDMS_GetOption.eGetOption_ExcludeDeleted,
+            return new TEDMS_GetOptionSet(TEDMS_GetOption.eGetOption_GetAllItemRevisions,TEDMS_GetOption.eGetOption_IncludeHiddenRevisions,TEDMS_GetOption.eGetOption_ExcludeDeleted,
                 TEDMS_GetOption.eGetOption_ExcludeParameters);
+        }
+        static TEDMS_GetOptionSet InventoryOptions()
+        {
+            // Native item counts include deleted tombstones even with ExcludeDeleted.
+            // Verify that same inventory, then remove inactive items before reading histories.
+            return new TEDMS_GetOptionSet(TEDMS_GetOption.eGetOption_IncludeDeleted,TEDMS_GetOption.eGetOption_ExcludeParameters);
         }
         IEDMS_Vault Vault()
         {
@@ -58,17 +63,30 @@ namespace AltiumRevisionRetirement
         int Count(IEDMS_Vault vault, string folder, string type)
         {
             folder=Id.Native(folder); type=Id.Native(type);
-            var count=vault.GetFolderItemsCount(folder,type,"","","",Options(),ReadFlags(),null,null);
+            var count=vault.GetFolderItemsCount(folder,type,"","","",InventoryOptions(),ReadFlags(),null,null);
             Check(count); if(count.GetItemsCount()<0) throw new InvalidOperationException("Altium returned an invalid count.");
             return count.GetItemsCount();
         }
+        static WorkspaceFolder Folder(IULB_Folder folder)
+        { return new WorkspaceFolder {Guid=folder.GetGUID(),ParentGuid=folder.GetParentFolderGUID(),Name=folder.GetHRID(),SharedName=folder.GetSharedName()}; }
+        static IEnumerable<IULB_Folder> SubFolders(IULB_Folder folder)
+        { for(int i=0;i<folder.GetSubFolderCount();i++) yield return folder.GetSubFolder(i); }
         public IList<Item> ReadAll(Action<string> progress)
         {
             var v=Vault(); var identity=ActiveWorkspace().Key;
             v.InvalidateCache();
             var folders=v.GetAllFolders(ReadFlags(),null,null); Check(folders);
-            var folderIds=List<IULB_Folder>(folders.GetFolders()).Select(f=>f.GetGUID()).ToList();
-            var itemIds=FolderInventory.Read(folderIds,Types,
+            var initial=List<IULB_Folder>(folders.GetFolders()).Select(Folder).ToList();
+            var tree=ComponentFolderTree.Read(initial,root=>
+            {
+                if(ActiveWorkspace().Key!=identity) throw new InvalidOperationException("The active workspace changed during folder discovery.");
+                var nested=v.GetFolders(root,"",true,ReadFlags(),null,null); Check(nested);
+                return ComponentFolderTree.Flatten(List<IULB_Folder>(nested.GetFolders()),Folder,SubFolders);
+            },progress);
+            var folderIds=tree.Select(f=>f.Guid).ToList();
+            var names=tree.ToDictionary(f=>Id.Of(f.Guid),f=>f.Name);
+            var active=new Dictionary<string,bool>();
+            var inventoryIds=FolderInventory.Read(folderIds,Types,
                 (folder,type)=>
                 {
                     if(ActiveWorkspace().Key!=identity) throw new InvalidOperationException("The active workspace changed during the scan.");
@@ -76,19 +94,31 @@ namespace AltiumRevisionRetirement
                 },
                 (folder,type)=>
                 {
-                var rows=v.GetItemsForFolder(Id.Native(folder),Id.Native(type),Options(),ReadFlags(),null,null); Check(rows);
-                var found=List<IULB_Item>(rows.GetItems());
-                if(found.Any(i=>!Id.Same(i.GetContentTypeGUID(),type)))
-                    throw new InvalidOperationException("Altium returned an item with a different content type.");
-                return found.Select(i=>Id.Of(i.GetGUID())).ToList();
+                return ItemPages.Read(Count(v,folder,type),page=>
+                {
+                    progress("Reading items in Components / "+names[Id.Of(folder)]);
+                    var rows=v.GetItemsPerPageForFolder(Id.Native(folder),Id.Native(type),"","","",InventoryOptions(),ReadFlags(),null,null,page,250); Check(rows);
+                    var found=List<IULB_Item>(rows.GetItems());
+                    if(found.Any(i=>!Id.Same(i.GetContentTypeGUID(),type)))
+                        throw new InvalidOperationException("Altium returned an item with a different content type.");
+                    foreach(var item in found)
+                    {
+                        string id=Id.Of(item.GetGUID());bool previous;
+                        if(active.TryGetValue(id,out previous) && previous!=item.GetIsActive())
+                            throw new InvalidOperationException("An item was deleted or restored during the inventory. Scan again.");
+                        active[id]=item.GetIsActive();
+                    }
+                    return found.Select(i=>Id.Of(i.GetGUID())).ToList();
+                });
                 },progress);
+            var itemIds=FolderInventory.ActiveItems(inventoryIds,active);
             var items=new List<Item>();
             foreach(var id in itemIds)
             {
                 if(ActiveWorkspace().Key!=identity) throw new InvalidOperationException("The active workspace changed during the scan.");
                 items.Add(ReadItem(id)); progress("Reading revisions: "+items.Count+"/"+itemIds.Count);
             }
-            progress("Inventory complete: "+folderIds.Count+" folders; "+items.Count+" items; "+items.Sum(i=>i.Revisions.Count)+" revisions.");
+            progress("Inventory complete: "+folderIds.Count+" folders; "+items.Count+" active items; "+items.Sum(i=>i.Revisions.Count)+" revisions; "+(inventoryIds.Count-itemIds.Count)+" deleted items excluded.");
             return items;
         }
         public Item ReadItem(string itemGuid)
@@ -96,8 +126,14 @@ namespace AltiumRevisionRetirement
             var v=Vault(); v.InvalidateCache(); itemGuid=Id.Native(itemGuid);
             var rows=v.GetItemsByGUID(itemGuid,Options(),ReadFlags(),null,null); Check(rows);
             var native=rows.GetItemByGUID(itemGuid);
-            if(native==null || !Id.Same(native.GetGUID(),itemGuid)) throw new InvalidOperationException("The item is inaccessible or deleted.");
+            if(native==null || !native.GetIsActive() || !Id.Same(native.GetGUID(),itemGuid)) throw new InvalidOperationException("The item is inaccessible or deleted.");
             var revisions=List<IULB_ItemRevision>(rows.GetItemRevisions());
+            var embedded=native.GetRevisions();
+            if(embedded!=null) revisions.AddRange(List<IULB_ItemRevision>(embedded));
+            foreach(var group in revisions.GroupBy(r=>Id.Of(r.GetGUID())))
+                if(group.Select(r=>Id.Of(r.GetLifeCycleStateGUID())).Distinct().Count()!=1)
+                    throw new InvalidOperationException("The revision state changed while its history was being read.");
+            revisions=revisions.GroupBy(r=>Id.Of(r.GetGUID())).Select(g=>g.First()).ToList();
             if(revisions.Count==0) throw new InvalidOperationException("The API did not return the complete revision history.");
             var latest=v.GetLastItemRevision(itemGuid);
             if(latest==null || !Id.Same(latest.GetItemGUID(),itemGuid)) throw new InvalidOperationException("The latest revision could not be determined.");

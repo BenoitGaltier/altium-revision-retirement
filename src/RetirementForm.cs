@@ -96,6 +96,7 @@ namespace AltiumRevisionRetirement
             try
             {
                 var w=gateway.ActiveWorkspace(); workspace.Text="Active workspace: "+w.Name+Environment.NewLine+w.Url;
+                scanDiagnostics.Workspace(w);
                 var result=new RetirementEngine(gateway).Scan(Progress);
                 foreach(var c in result)
                 {

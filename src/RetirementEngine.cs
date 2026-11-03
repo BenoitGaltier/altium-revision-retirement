@@ -94,8 +94,7 @@ namespace AltiumRevisionRetirement
                 ItemHrid=item.Hrid, RevisionHrid=revision.Hrid, Name=item.Name, Kind=item.Kind,
                 LatestHrid=item.Revisions.Single(r => Id.Same(r.Guid,item.LatestGuid)).Hrid, BeforeGuid=Id.Of(revision.StateGuid), BeforeName=revision.StateName };
             var targets = item.States.Where(s => Obsolete(s.Name) && Id.Same(s.DefinitionGuid,item.DefinitionGuid)).ToList();
-            if (!revision.Released) c.Reason = "Planned / unreleased revision";
-            else if (!revision.CanUpdate) c.Reason = "Insufficient write permissions";
+            if (!revision.CanUpdate) c.Reason = "Insufficient write permissions";
             else if (targets.Count != 1) c.Reason = "The Obsolete state is missing or ambiguous in this lifecycle";
             else
             {

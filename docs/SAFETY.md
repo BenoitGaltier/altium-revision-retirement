@@ -4,7 +4,9 @@
 
 The only writer is `AltiumGateway.Transition`. It constructs one native `IULB_LifeCycleStateChange` and submits a singleton list through `IEDMS_Vault.AddLifeCycleStateChanges`. The request contains the existing transition GUID, its existing destination state GUID, the selected revision GUID and the user's note. No setter on the item's stored lifecycle field, database query, content mutation, definition update or arbitrary DXP process is exposed.
 
-Read operations use `edmsForceRefresh`; the revision read requests `eGetOption_GetAllItemRevisions`, `eGetOption_IncludeHiddenRevisions`, `eGetOption_ExcludeDeleted` and `eGetOption_ExcludeParameters`. Item inventory is read per folder and supported content type with before/after item-count comparisons. A truncated or inconsistent folder response aborts the scan instead of enabling a partial result. Only accessible, non-deleted content can be enumerated; this is not an administrator-wide database dump or a transactional workspace snapshot.
+Read operations use `edmsForceRefresh`; the revision read requests `eGetOption_GetAllItemRevisions`, `eGetOption_IncludeHiddenRevisions`, `eGetOption_ExcludeDeleted` and `eGetOption_ExcludeParameters`. The Components root is identified by name and its entire subtree is loaded through the native recursive folder API and every nested SubFolder object is unfolded. Item inventory is read per discovered folder and supported content type with before/after item-count comparisons. A truncated or inconsistent folder response aborts the scan instead of enabling a partial result. Only accessible, non-deleted content can be enumerated; this is not an administrator-wide database dump or a transactional workspace snapshot.
+
+The native folder count includes deleted item tombstones even when `ExcludeDeleted` is requested. Discovery therefore uses `IncludeDeleted`, verifies the complete paginated logical-item count, and removes items whose native `GetIsActive()` flag is false before reading revision histories. Histories still request `ExcludeDeleted`, and each item must remain active on reread. Deleted items are never candidates and are never restored or modified.
 
 The active workspace comes from `EDP.Utils.GetDXPServerManager().GetEnterpriseVault()`, with a connected-server check. No first-installed-vault fallback or external credential storage exists. Workspace GUID, service URL and user GUID form the captured identity.
 
@@ -12,7 +14,7 @@ The active workspace comes from `EDP.Utils.GetDXPServerManager().GetEnterpriseVa
 
 1. All GUIDs are well formed, revisions are unique, belong to their parent item, and the native latest GUID belongs to the returned full history.
 2. The content type is exactly Component, Symbol or PcbComponent (footprint).
-3. The candidate is not the native latest revision, is published, is writable, and is not already named Obsolete.
+3. The candidate is not the native latest revision, is writable, and is not already named Obsolete.
 4. Exactly one state named Obsolete exists in the item's lifecycle definition; exactly one direct transition links the current state to it in that same definition. Multi-step routes and ambiguous states are blocked.
 5. All non-Obsolete referencing parent revisions are explicitly selected and eligible, or the operation is blocked. A topological sort processes them first; cycles are blocked.
 6. Before each individual write, the snapshot and dependency checks are repeated. Dependencies must now actually be Obsolete. An intent record is flushed to disk. The native writer rereads eligibility and identity once more before submission.

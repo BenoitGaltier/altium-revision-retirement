@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.3 — 3 November 2026
+
+- Identify Components as the explicit library root and read its complete recursive subtree before scanning items.
+- Unfold every nested native SubFolder object and validate its parent chain. Add regressions covering four hierarchy levels and the five-entry SDK response.
+- Include older Draft revisions in all three content kinds. Select them according to existing lifecycle transitions and permissions, without requiring a release timestamp.
+- Read logical item inventory through the paginated native SDK API and combine flat and embedded revision collections when loading full histories.
+- Match native item counts that include deleted tombstones, then exclude inactive items before reading histories or showing candidates. Retain count and page-coverage checks.
+- Record the active workspace and complete folder/item/revision totals in local scan diagnostics.
+
 ## 0.1.2 — 3 November 2026
 
 - Fix the native scan error `No folders specified`: remove the synthetic empty root folder and query only actual folder GUIDs returned by Altium.

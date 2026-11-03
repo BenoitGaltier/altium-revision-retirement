@@ -55,8 +55,8 @@ All extension controls, status messages, validation errors and confirmation text
 ## Review and retire revisions
 
 1. Connect to the intended workspace in Designer. Open the extension and check the workspace name and URL.
-2. Click **Scan**. The scan lists old revisions whose state is not named `Obsolete`. Single-revision items and the latest revision of every item are excluded. Hidden latest revisions are also protected.
-3. Review the item, revision, current state and protected latest revision. A blocked row stays visible so you can see why it cannot be changed. Typical reasons include missing write permissions, an unpublished/planned revision, an absent or ambiguous Obsolete state, or no direct lifecycle transition.
+2. Click **Scan**. The scan traverses the complete folder tree under **Components** and lists old revisions whose state is not named `Obsolete`, including `Draft` revisions. Single-revision items and the latest revision of every item are excluded. Hidden latest revisions are also protected.
+3. Review the item, revision, current state and protected latest revision. A blocked row stays visible so you can see why it cannot be changed. Typical reasons include missing write permissions, an absent or ambiguous Obsolete state, or no direct lifecycle transition.
 4. Select the revisions to retire. **Select all** selects eligible rows; it does not bypass the dependency checks.
 5. Click **Set selected revisions to Obsolete…**. The extension rereads the items and their parent references. If a symbol or footprint is still referenced by a non-Obsolete parent, the operation stops unless that old parent is also explicitly selected and eligible. A latest parent is never added to the selection.
 6. Review the ordered plan. Selected parents appear before their models. Enter a short note explaining the change, then click **Confirm**. Closing or cancelling this dialog applies no transition.

@@ -79,7 +79,7 @@ static class SafetyTests
             Test("single revision excluded even if Obsolete",()=>{var f=Fixture();f.Items[0].Revisions.RemoveAt(0);Assert(Scan(f).Count==0,"Single revision included");});
             Test("older Obsolete revisions excluded",()=>{var f=Fixture();f.Items[0].Revisions[0].StateName="Obsolete";Assert(Scan(f).Count==0,"Obsolete included");});
             Test("hidden newest remains protected",()=>{var f=Fixture();f.Items[0].Revisions[1].StateName="Hidden";Assert(Scan(f).Single().RevisionGuid==f.Items[0].Revisions[0].Guid,"Hidden latest selected");});
-            Test("unreleased older revision blocked",()=>{var f=Fixture();f.Items[0].Revisions[0].Released=false;Assert(!Scan(f).Single().Selectable,"Planned revision selected");});
+            Test("older Draft revisions remain selectable when their lifecycle permits Obsolete",()=>{var f=Fixture();f.Items[0].States[0].Name="Draft";foreach(var r in f.Items[0].Revisions){r.StateName="Draft";r.Released=false;}var c=Scan(f);Assert(c.Count==1&&c[0].Selectable&&c[0].BeforeName=="Draft","Draft revision was incorrectly excluded");});
             Test("read-only revision remains listed but blocked",()=>{var f=Fixture();f.Items[0].Revisions[0].CanUpdate=false;var c=Scan(f);Assert(c.Count==1&&!c[0].Selectable,"Permissions ignored");Reject(()=>new RetirementEngine(f).Prepare(c));});
             Test("missing direct transition blocked",()=>{var f=Fixture();f.Items[0].Transitions.Clear();Assert(!Scan(f).Single().Selectable,"Missing transition allowed");});
             Test("ambiguous Obsolete state blocked",()=>{var f=Fixture();f.Items[0].States.Add(new State {Guid=G(),Name="Obsolete",DefinitionGuid=f.Items[0].DefinitionGuid});Assert(!Scan(f).Single().Selectable,"Ambiguous target allowed");});
@@ -112,7 +112,10 @@ static class SafetyTests
             Test("latest state postcondition detects unexpected side effect",()=>{var f=Fixture();var p=new RetirementEngine(f).Prepare(Scan(f));f.OnWrite=()=>f.Items[0].Revisions[1].StateGuid=G();Reject(()=>Execute(f,p,new Journal()));});
             Test("latest rechecked during preflight",()=>{var f=Fixture();var c=Scan(f);f.OnRead=()=>{f.Items[0].LatestGuid=f.Items[0].Revisions[0].Guid;};Reject(()=>new RetirementEngine(f).Prepare(c));Assert(f.Writes.Count==0,"Latest guard missing");});
             Test("successful transition emits intent and verified",()=>{var f=Fixture();var p=new RetirementEngine(f).Prepare(Scan(f));var j=new Journal();Assert(Execute(f,p,j)==1,"Transition failed");Assert(j.Events.SequenceEqual(new[]{"intent","verified"}),"Audit ordering");Assert(f.Writes.Single()!=f.Items[0].LatestGuid,"Latest written");});
+            Test("all three content kinds list old Draft revisions and protect latest Draft",()=>{var f=Fixture();f.Items.Add(Make("Symbol"));f.Items.Add(Make("Footprint"));foreach(var item in f.Items){item.States[0].Name="Draft";foreach(var r in item.Revisions){r.StateName="Draft";r.Released=false;}}var c=Scan(f);Assert(c.Count==3&&c.All(r=>r.Selectable)&&c.All(r=>r.RevisionHrid=="REV-9"),"Draft history was hidden or latest included");});
             FolderInventoryTests.Run(Test);
+            ComponentFolderTreeTests.Run(Test);
+            ItemPagesTests.Run(Test);
             Console.WriteLine(passed+" safety and inventory tests passed; no live workspace used.");return 0;
         }
         catch(Exception ex) {Console.Error.WriteLine(ex);return 1;}

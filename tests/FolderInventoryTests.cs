@@ -10,6 +10,9 @@ static class FolderInventoryTests
     static void Reject(Action action) {try {action();}catch(InvalidOperationException){return;}throw new Exception("Expected inventory rejection");}
     public static void Run(Action<string,Action> test)
     {
+        test("deleted tombstones count toward completeness but never enter revision reads",()=>{string live=G(),deleted=G();var result=FolderInventory.ActiveItems(new[]{live,deleted},new Dictionary<string,bool>{{live,true},{deleted,false}});Assert(result.Count==1&&result[0]==live);});
+        test("missing native active flag blocks the inventory",()=>Reject(()=>FolderInventory.ActiveItems(new[]{G()},new Dictionary<string,bool>())));
+        test("unexpected native active flag blocks the inventory",()=>Reject(()=>FolderInventory.ActiveItems(new string[0],new Dictionary<string,bool>{{G(),true}})));
         test("native SDK identifiers retain Altium uppercase GUID formatting",()=>{string id=G();Assert(Id.Native(id)==id.ToUpperInvariant());Assert(Id.Same(id,Id.Native(id)));});
         test("scan queries only real returned folders, including the real root folder",()=>{
             string root=G(),nested=G(),component=G(),symbol=G(),footprint=G(),one=G(),two=G();

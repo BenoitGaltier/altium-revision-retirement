@@ -4,7 +4,7 @@ Standalone C# extension loaded directly into Altium Designer. It finds supersede
 
 No bridge, companion application, local web server or separately stored Altium credentials. The full interface, validation messages and confirmation dialog are in English. [English user guide](docs/USER_GUIDE.md) · [Documentation française](README.fr.md).
 
-**Version 0.1.2 — preview.** Native compilation, installation and opening the branded window were verified with Altium Designer 26.11.1.28 / C# SDK 4.0 / .NET Framework 4.8. The Fluidra logo, English header and English guide link were visible in the running Designer process. Safety tests use an isolated fake gateway. Real workspace enumeration and lifecycle transitions still require the [sandbox acceptance procedure](docs/VALIDATION.md); no production lifecycle transition was performed by the installer or these checks. This is an independent extension, not an Altium-certified product.
+**Version 0.1.3 — preview.** Native compilation, installation and opening the branded window were verified with Altium Designer 26.11.1.28 / C# SDK 4.0 / .NET Framework 4.8. The Fluidra logo, English header and English guide link were visible in the running Designer process. Safety tests use an isolated fake gateway. Real workspace enumeration and lifecycle transitions still require the [sandbox acceptance procedure](docs/VALIDATION.md); no production lifecycle transition was performed by the installer or these checks. This is an independent extension, not an Altium-certified product.
 
 ## Build and install
 
@@ -28,10 +28,12 @@ SDK assemblies are resolved from your licensed local installation during the bui
 
 ![Offscreen UI preview with sample data, not a live workspace](docs/ui-preview.png)
 
+The inventory starts at the workspace's **Components** root and loads its complete recursive folder tree before reading items. Older `Draft` revisions are included; selection depends on permissions and the existing direct transition to Obsolete, without requiring a release date.
+
 ## Use
 
 1. Connect to the intended workspace in Designer.
-2. Choose **Scan**. This reads the workspace and displays only revisions other than the native latest revision whose current state is not named `Obsolete`. Planned revisions, insufficient permissions and missing/ambiguous direct transitions remain visible with a blocking reason.
+2. Choose **Scan**. This reads the workspace and displays only revisions other than the native latest revision whose current state is not named `Obsolete`. Insufficient permissions and missing/ambiguous direct transitions remain visible with a blocking reason.
 3. Select individual rows or **Select all** (all rows with a valid direct transition). The latest revision of every item is excluded even if hidden, planned or already Obsolete.
 4. Choose **Set selected revisions to Obsolete…**. The extension rereads the selected items and dependencies. A referenced symbol/footprint cannot be retired while a parent revision remains non-Obsolete. Select an eligible old parent revision as well, or leave the model unchanged. A latest parent is never added automatically.
 5. Review the ordered plan, enter a mandatory lifecycle change note, and confirm. Parents are processed before their selected models. There is no cascade or automatic multi-step lifecycle route.
