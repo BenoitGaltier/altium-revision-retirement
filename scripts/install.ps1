@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param([switch]$CheckOnly,[string]$AltiumApplication,[string]$AltiumExtensionsPath,[string]$AltiumSdkRoot,[string]$BackupRoot)
+param([switch]$CheckOnly,[string]$AltiumApplication,[string]$AltiumExtensionsPath,[string]$BackupRoot)
 $ErrorActionPreference='Stop'
 $package=Split-Path -Parent $PSScriptRoot
 $manifestPath=Join-Path $package 'manifest.json'
@@ -12,9 +12,9 @@ if(-not $framework -or [int]$framework.Release -lt 528040) {throw '.NET Framewor
 $manifest=Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
 $hrid='AltiumRevisionRetirement'
 $extensionGuid='f19cf220-6b04-4d43-a356-eebe90b392e6'
-if($manifest.schemaVersion -ne 1 -or $manifest.extension.hrid -ne $hrid -or $manifest.extension.guid -ne $extensionGuid) {throw 'Invalid extension package identity.'}
+if($manifest.schemaVersion -ne 2 -or $manifest.extension.hrid -ne $hrid -or $manifest.extension.guid -ne $extensionGuid) {throw 'Invalid extension package identity or format. Extract the complete current Windows release.'}
 $version=[version][string]$manifest.extension.version
-$managedNames=@('AltiumRevisionRetirement.dll','AltiumRevisionRetirement.ins','AltiumRevisionRetirement.rcs','fluidra-extension-small.png','fluidra-extension-large.png','USER_GUIDE.en.md')
+$managedNames=@('AltiumRevisionRetirement.dll','AltiumRevisionRetirement.ins','AltiumRevisionRetirement.rcs','fluidra-extension-small.png','fluidra-extension-large.png','USER_GUIDE.en.md','Altium.SDK.dll','Altium.SDK.Interfaces.dll','THIRD_PARTY_NOTICES.md')
 $files=@($manifest.files)
 if($files.Count -ne $managedNames.Count -or @($files.name | ForEach-Object {([string]$_).ToLowerInvariant()} | Select-Object -Unique).Count -ne $managedNames.Count -or @($files | Where-Object {$_.name -notin $managedNames}).Count -gt 0) {throw 'The package file list is incomplete or invalid.'}
 foreach($file in $files) {
@@ -37,17 +37,14 @@ $registryPath=Join-Path $extensionRoot 'ExtensionsRegistry.xml'
 if(-not (Test-Path -LiteralPath $registryPath)) {throw "Altium extension registry not found: $registryPath. Select a valid existing Altium installation."}
 $destination=Join-Path $extensionRoot $hrid
 if((Test-Path -LiteralPath $destination) -and ((Get-Item -LiteralPath $destination).Attributes -band [IO.FileAttributes]::ReparsePoint)) {throw 'The extension destination must not be a junction or symbolic link.'}
-if(-not $AltiumSdkRoot) {$AltiumSdkRoot=Join-Path $extensionRoot 'Altium Developer\SDK4.0'}
-$AltiumSdkRoot=[IO.Path]::GetFullPath($AltiumSdkRoot.TrimEnd('\','/'))
-$libraryPaths=@{'Altium.SDK.dll'=(Join-Path $AltiumSdkRoot 'CSharp\Altium.SDK.dll');'Altium.SDK.Interfaces.dll'=(Join-Path (Split-Path -Parent $AltiumSdkRoot) 'Altium.SDK.Interfaces.dll')}
+$libraryPaths=@{'Altium.SDK.dll'=(Join-Path $package 'payload\Altium.SDK.dll');'Altium.SDK.Interfaces.dll'=(Join-Path $package 'payload\Altium.SDK.Interfaces.dll')}
 $dependencies=@($manifest.dependencies)
 if($dependencies.Count -ne 2 -or @($dependencies.name | Select-Object -Unique).Count -ne 2) {throw 'Invalid runtime dependency list.'}
 foreach($dependency in $dependencies) {
     if(-not $libraryPaths.ContainsKey([string]$dependency.name)) {throw 'Unexpected runtime dependency.'}
     $path=$libraryPaths[[string]$dependency.name]
-    if(-not (Test-Path -LiteralPath $path)) {throw "Missing runtime library: $($dependency.name). Expected: $path. Install Altium Developer with C# SDK 4.0 through Altium Designer Extensions and Updates, then close Designer and rerun Install.ps1. No compiler or local build is needed. If already installed elsewhere, pass -AltiumSdkRoot 'C:\path\to\SDK4.0'."}
-    if($dependency.sha256 -notmatch '^[a-fA-F0-9]{64}$' -or (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash -ne $dependency.sha256) {throw "Incompatible runtime library: $($dependency.name). This release requires $($dependency.assemblyIdentity), SHA256 $($dependency.sha256). Use the matching local Altium Developer SDK 4.0 libraries or a release built for your Altium version. SDK files are not downloaded or replaced by this installer."}
-    Write-Output ('Runtime dependency verified: '+$dependency.name+' ('+$dependency.assemblyIdentity+').')
+    if($dependency.sha256 -notmatch '^[a-fA-F0-9]{64}$' -or (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash -ne $dependency.sha256) {throw "Bundled runtime library metadata mismatch: $($dependency.name). Download and extract the complete release again."}
+    Write-Output ('Bundled runtime verified: '+$dependency.name+' ('+$dependency.assemblyIdentity+').')
 }
 [xml]$registry=Get-Content -LiteralPath $registryPath -Raw
 if($registry.DocumentElement.Name -ne 'Extensions') {throw 'Unexpected Altium extension registry format.'}
@@ -65,7 +62,6 @@ $registryHash=(Get-FileHash -LiteralPath $registryPath -Algorithm SHA256).Hash
 $otherEntries=@($registry.Extensions.Item | Where-Object {$_.HRID -ne $hrid} | ForEach-Object {$_.OuterXml})
 $sources=@{};$expectedHashes=@{};$previous=@{}
 foreach($file in $files) {$sources[$file.name]=Join-Path $package ('payload\'+$file.name);$expectedHashes[$file.name]=$file.sha256}
-foreach($dependency in $dependencies) {$sources[$dependency.name]=$libraryPaths[$dependency.name];$expectedHashes[$dependency.name]=$dependency.sha256}
 foreach($name in $sources.Keys) {
     $target=Join-Path $destination $name
     $previous[$name]=Test-Path -LiteralPath $target

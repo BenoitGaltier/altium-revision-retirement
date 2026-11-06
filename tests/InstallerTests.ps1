@@ -27,17 +27,16 @@ function Fixture([string]$registration='none') {
         Put (Join-Path $target 'AltiumRevisionRetirement.dll') 'old installed DLL'
     }
     [IO.Directory]::CreateDirectory($extensionRoot) | Out-Null;$registry.Save($registryPath)
-    $payloadFiles=@(foreach($name in @('AltiumRevisionRetirement.dll','AltiumRevisionRetirement.ins','AltiumRevisionRetirement.rcs','fluidra-extension-small.png','fluidra-extension-large.png','USER_GUIDE.en.md')) {
+    $payloadFiles=@(foreach($name in @('AltiumRevisionRetirement.dll','AltiumRevisionRetirement.ins','AltiumRevisionRetirement.rcs','fluidra-extension-small.png','fluidra-extension-large.png','USER_GUIDE.en.md','Altium.SDK.dll','Altium.SDK.Interfaces.dll','THIRD_PARTY_NOTICES.md')) {
         Put (Join-Path $root ('payload\'+$name)) ('new '+$name)
         [ordered]@{name=$name;sha256=(Get-FileHash -LiteralPath (Join-Path $root ('payload\'+$name))).Hash.ToLowerInvariant()}
     })
     $sdk=Join-Path $extensionRoot 'Altium Developer\SDK4.0'
     $dependencies=@(foreach($name in @('Altium.SDK.dll','Altium.SDK.Interfaces.dll')) {
-        $path=if($name -eq 'Altium.SDK.dll') {Join-Path $sdk 'CSharp\Altium.SDK.dll'} else {Join-Path (Split-Path -Parent $sdk) $name}
-        Put $path ('local licensed-library fixture '+$name)
+        $path=Join-Path $root ('payload\'+$name)
         [ordered]@{name=$name;sha256=(Get-FileHash -LiteralPath $path).Hash.ToLowerInvariant();assemblyIdentity='isolated test fixture'}
     })
-    $manifest=[ordered]@{schemaVersion=1;extension=[ordered]@{hrid='AltiumRevisionRetirement';guid='f19cf220-6b04-4d43-a356-eebe90b392e6';version='0.1.4.0';title='Altium Revision Retirement';publisher='BenoitGaltier';shortDescription='Review superseded revisions';longDescription='English description';help='https://example.invalid/guide'};files=$payloadFiles;dependencies=$dependencies}
+    $manifest=[ordered]@{schemaVersion=2;extension=[ordered]@{hrid='AltiumRevisionRetirement';guid='f19cf220-6b04-4d43-a356-eebe90b392e6';version='0.1.5.0';title='Altium Revision Retirement';publisher='BenoitGaltier';shortDescription='Review superseded revisions';longDescription='English description';help='https://example.invalid/guide'};files=$payloadFiles;dependencies=$dependencies}
     $fixture=[pscustomobject]@{Root=$root;Installer=(Join-Path $root 'Install.ps1');Target=$target;ExtensionRoot=$extensionRoot;Registry=$registryPath;Sdk=$sdk;Backup=(Join-Path $root 'backups');Manifest=$manifest}
     SaveManifest $fixture
     return $fixture
@@ -65,16 +64,17 @@ Test 'missing .NET Framework runtime gives instructions before target writes' {
     Unchanged $f $before
     Assert (-not (Test-Path -LiteralPath $f.Target)) 'Missing .NET runtime partially installed files.'
 }
-Test 'first installation registers the precompiled payload and preserves other extensions' {
+Test 'first installation without Altium Developer installs bundled runtimes and preserves other extensions' {
     $f=Fixture;[xml]$before=Get-Content -LiteralPath $f.Registry -Raw;$other=$before.Extensions.Item.OuterXml
     Install $f | Out-Null
     [xml]$after=Get-Content -LiteralPath $f.Registry -Raw
     $own=@($after.Extensions.Item | Where-Object {$_.HRID -eq 'AltiumRevisionRetirement'})
-    Assert ($own.Count -eq 1 -and $own[0].Version -eq '0.1.4.0') 'First registration failed.'
+    Assert ($own.Count -eq 1 -and $own[0].Version -eq '0.1.5.0') 'First registration failed.'
     Assert (($after.Extensions.Item | Where-Object {$_.HRID -eq 'OtherExtension'}).OuterXml -eq $other) 'Another extension changed.'
     Assert ((Get-Content -LiteralPath (Join-Path $f.Target 'AltiumRevisionRetirement.dll') -Raw) -eq 'new AltiumRevisionRetirement.dll') 'Precompiled DLL was not installed.'
     Assert (Test-Path -LiteralPath (Join-Path $f.Target 'USER_GUIDE.en.md')) 'English guide missing.'
-    Assert (-not (Test-Path -LiteralPath (Join-Path $f.Sdk 'SDK.ticket'))) 'Runtime installation must not need an SDK ticket.'
+    Assert (-not (Test-Path -LiteralPath (Split-Path -Parent $f.Sdk))) 'Runtime installation must not need Altium Developer.'
+    foreach($name in @('Altium.SDK.dll','Altium.SDK.Interfaces.dll')) {Assert ((Get-FileHash -LiteralPath (Join-Path $f.Target $name)).Hash -eq (Get-FileHash -LiteralPath (Join-Path $f.Root ('payload\'+$name))).Hash) 'Bundled runtime was not copied correctly.'}
     Assert (@(Get-ChildItem -LiteralPath $f.Backup -Filter 'installed-files.json' -Recurse).Count -eq 1) 'Hash receipt missing.'
 }
 Test 'update replaces only managed files and backs up the previous DLL' {
@@ -95,19 +95,31 @@ Test 'open Designer blocks runtime and registry writes' {
     Unchanged $f $before
     Assert ((Get-Content -LiteralPath (Join-Path $f.Target 'AltiumRevisionRetirement.dll') -Raw) -eq 'old installed DLL') 'Loaded runtime was overwritten.'
 }
-Test 'missing dependency names the library and Altium Developer without changing installation' {
+Test 'missing bundled dependency asks for a complete release without changing installation' {
     $f=Fixture;$before=(Get-FileHash -LiteralPath $f.Registry).Hash
-    Remove-Item -LiteralPath (Join-Path $f.Sdk 'CSharp\Altium.SDK.dll')
-    Reject {Install $f} 'Missing runtime library: Altium.SDK.dll.*Install Altium Developer'
+    Remove-Item -LiteralPath (Join-Path $f.Root 'payload\Altium.SDK.dll')
+    Reject {Install $f} 'Package integrity check failed: Altium.SDK.dll.*Download'
     Unchanged $f $before
     Assert (-not (Test-Path -LiteralPath $f.Target)) 'Missing dependency partially installed the extension.'
 }
-Test 'incompatible local libraries block installation before any target write' {
+Test 'corrupt bundled interfaces block installation before any target write' {
     $f=Fixture;$before=(Get-FileHash -LiteralPath $f.Registry).Hash
-    Put (Join-Path (Split-Path -Parent $f.Sdk) 'Altium.SDK.Interfaces.dll') 'incompatible .NET library'
-    Reject {Install $f} 'Incompatible runtime library: Altium.SDK.Interfaces.dll'
+    Put (Join-Path $f.Root 'payload\Altium.SDK.Interfaces.dll') 'corrupt .NET library'
+    Reject {Install $f} 'Package integrity check failed: Altium.SDK.Interfaces.dll'
     Unchanged $f $before
     Assert (-not (Test-Path -LiteralPath $f.Target)) 'Incompatible library partially installed the extension.'
+}
+Test 'unrelated local SDK versions are never used by the bundled installer' {
+    $f=Fixture
+    Put (Join-Path $f.Sdk 'CSharp\Altium.SDK.dll') 'wrong local SDK version'
+    Put (Join-Path (Split-Path -Parent $f.Sdk) 'Altium.SDK.Interfaces.dll') 'wrong local interfaces version'
+    Install $f | Out-Null
+    Assert ((Get-FileHash -LiteralPath (Join-Path $f.Target 'Altium.SDK.dll')).Hash -eq (Get-FileHash -LiteralPath (Join-Path $f.Root 'payload\Altium.SDK.dll')).Hash) 'Installer used a local SDK instead of the bundled runtime.'
+}
+Test 'bundled runtime metadata mismatch is blocked before any installed file changes' {
+    $f=Fixture;$f.Manifest.dependencies[0].sha256=('0'*64);SaveManifest $f
+    Reject {Install $f} 'Bundled runtime library metadata mismatch'
+    Assert (-not (Test-Path -LiteralPath $f.Target)) 'Invalid dependency metadata deployed files.'
 }
 Test 'corrupt payload is rejected before registration or backup writes' {
     $f=Fixture;$before=(Get-FileHash -LiteralPath $f.Registry).Hash
@@ -154,6 +166,8 @@ Test 'real native build and EPD generation handle spaces and trailing SDK separa
     Copy-Item -LiteralPath (Join-Path $project 'AltiumRevisionRetirement.EPD') -Destination $f.Root
     Put (Join-Path $f.Root 'AltiumRevisionRetirement.csproj') '<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003"><PropertyGroup><OutputType>Library</OutputType><AssemblyName>AltiumRevisionRetirement</AssemblyName><TargetFrameworkVersion>v4.0</TargetFrameworkVersion><OutputPath>bin\Release\</OutputPath></PropertyGroup><ItemGroup><Compile Include="Fixture.cs"/></ItemGroup><Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets"/></Project>'
     Put (Join-Path $f.Root 'Fixture.cs') 'public sealed class InstallerBuildFixture {}'
+    Put (Join-Path $f.Sdk 'CSharp\Altium.SDK.dll') 'Unused build reference fixture'
+    Put (Join-Path (Split-Path -Parent $f.Sdk) 'Altium.SDK.Interfaces.dll') 'Unused build reference fixture'
     Put (Join-Path $f.Sdk 'SDK.ticket') 'Unused test ticket'
     $log=@(& (Join-Path $f.Root 'scripts\build.ps1') -AltiumSdkRoot ($f.Sdk+'\'))
     Assert (Test-Path -LiteralPath (Join-Path $f.Root 'bin\Release\AltiumRevisionRetirement.dll')) ('Native path arguments failed: '+($log -join "`n"))

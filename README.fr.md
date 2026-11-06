@@ -2,17 +2,17 @@
 
 Extension C# **autonome**, chargée directement dans Altium Designer, pour passer les anciennes révisions de **composants, symboles et footprints** à l'état **Obsolete** dans le workspace actif. Elle ne dépend d'aucun bridge, serveur local ou application compagnon.
 
-**Version 0.1.4 de prévalidation** : une archive Windows avec la DLL compilée est disponible dans les [Releases GitHub](https://github.com/BenoitGaltier/altium-revision-retirement/releases/latest). L'installation ne compile rien et ne nécessite ni IDE ni projet EPD. Le scan natif a été vérifié avec Altium Designer Agile 26.11.1.28 / SDK C# 4.0 / .NET Framework 4.8. Les transitions natives restent à vérifier avec la [procédure de validation](docs/VALIDATION.md). Aucune transition réelle n'a été exécutée par ces contrôles.
+**Version 0.1.5 de prévalidation** : l'archive Windows contient l'extension compilée et ses deux DLL Altium. Aucun Altium Developer, SDK, compilateur, IDE ou projet EPD n'est requis sur le poste utilisateur. Le scan natif a été vérifié avec Altium Designer Agile 26.11.1.28 / SDK C# 4.0 / .NET Framework 4.8. Les transitions natives restent à vérifier avec la [procédure de validation](docs/VALIDATION.md). Aucune transition réelle n'a été exécutée par ces contrôles.
 
 ## Installation
 
-Télécharger **`altium-revision-retirement-0.1.4-windows-x64.zip`** dans les assets de la release, extraire l'archive, fermer Altium puis lancer dans son dossier :
+Télécharger **`altium-revision-retirement-0.1.5-windows-x64.zip`** dans les assets de la release, extraire l'archive, fermer Altium puis lancer dans son dossier :
 
 ```powershell
 .\Install.ps1
 ```
 
-Prérequis : Windows x64, .NET Framework 4.8 et les DLL locales `Altium.SDK.dll` / `Altium.SDK.Interfaces.dll` fournies par Altium Developer avec le SDK C# 4.0. L'installateur indique la bibliothèque manquante ou incompatible et la marche à suivre. Aucun compilateur ni ticket SDK n'est requis pour l'installation. Les bibliothèques propriétaires ne sont pas incluses dans l'archive.
+Prérequis : Windows x64, .NET Framework 4.8 et Altium Designer sous licence. `Altium.SDK.dll` et `Altium.SDK.Interfaces.dll` sont incluses dans l'archive et vérifiées par l'installateur. Altium Developer n'est pas requis. Les sources du SDK, tickets et fichiers d'activation sont exclus.
 
 Redémarrer Altium puis ouvrir **Tools → Revision Retirement…** dans un éditeur schématique/PCB. `Install.ps1 -CheckOnly` vérifie les dépendances sans modifier l'installation. Les [instructions d'installation en anglais](docs/INSTALLATION.md) détaillent les avertissements Windows, les chemins personnalisés et les sauvegardes. Les téléchargements GitHub « Source code » sont destinés au développement ; choisir l'asset `windows-x64.zip` pour installer.
 

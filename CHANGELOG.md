@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.5 — 6 November 2026
+
+- Include the unmodified Altium.SDK.dll and Altium.SDK.Interfaces.dll runtime assemblies in the compiled Windows package, with vendor notices and per-file hashes.
+- Remove the target-PC Altium Developer/SDK dependency and custom SDK path option. Installation uses only the bundled payload and preserves other SDK or Altium system libraries.
+- Verify first installation without an Altium Developer folder, corrupted or missing bundled DLLs, and independence from unrelated local SDK versions. Add an isolated real-assembly/UI load probe.
+- Keep SDK sources, tickets, license credentials and SDK binaries out of source archives and Git history. Runtime redistribution remains governed by the applicable Altium agreement.
+
 ## 0.1.4 — 6 November 2026
 
 - Publish a compiled `windows-x64.zip` release with `Install.ps1`. Target PCs do not compile code, open EPD projects or need an IDE or SDK ticket.

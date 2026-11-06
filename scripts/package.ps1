@@ -33,6 +33,9 @@ $sources=@{
     'fluidra-extension-small.png'=(Join-Path $project 'assets\fluidra-extension-small.png')
     'fluidra-extension-large.png'=(Join-Path $project 'assets\fluidra-extension-large.png')
     'USER_GUIDE.en.md'=(Join-Path $project 'docs\USER_GUIDE.md')
+    'Altium.SDK.dll'=(Join-Path $buildOutput 'Altium.SDK.dll')
+    'Altium.SDK.Interfaces.dll'=(Join-Path $buildOutput 'Altium.SDK.Interfaces.dll')
+    'THIRD_PARTY_NOTICES.md'=(Join-Path $project 'docs\THIRD_PARTY_NOTICES.md')
 }
 $payloadFiles=@(foreach($name in ($sources.Keys | Sort-Object)) {
     Copy-Item -LiteralPath $sources[$name] -Destination (Join-Path $payload $name)
@@ -44,7 +47,7 @@ $dependencies=@(foreach($name in @('Altium.SDK.dll','Altium.SDK.Interfaces.dll')
     [ordered]@{name=$name;assemblyIdentity=[Reflection.AssemblyName]::GetAssemblyName($path).FullName;sha256=(Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant()}
 })
 $manifest=[ordered]@{
-    schemaVersion=1
+    schemaVersion=2
     extension=[ordered]@{
         hrid='AltiumRevisionRetirement';guid='f19cf220-6b04-4d43-a356-eebe90b392e6'
         version=[string]$epd.Main.ExtensionVersionOptions.ExtensionVersion
@@ -64,4 +67,4 @@ Compress-Archive -Path (Join-Path $stage '*') -DestinationPath $binaryArchive -F
 $binaryHash=(Get-FileHash -LiteralPath $binaryArchive -Algorithm SHA256).Hash.ToLowerInvariant()
 "$binaryHash  $(Split-Path -Leaf $binaryArchive)" | Set-Content -LiteralPath "$binaryArchive.sha256" -Encoding ascii
 Write-Output $binaryArchive
-Write-Output 'Compiled release ready. Install.ps1 never invokes a compiler. Proprietary Altium SDK DLLs and tickets are excluded; dependency identities and hashes are listed in manifest.json.'
+Write-Output 'Compiled release ready with the two Altium runtime DLLs. No Altium Developer installation or compiler is needed on the target PC. SDK sources, license files and tickets are excluded. Redistribution remains subject to the applicable Altium agreement.'

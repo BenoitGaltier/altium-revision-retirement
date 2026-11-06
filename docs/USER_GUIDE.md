@@ -6,9 +6,9 @@ The extension runs directly inside Altium Designer. It uses the active Altium 36
 
 ## Installation
 
-Requirements: Windows x64, .NET Framework 4.8, Altium Designer and matching local `Altium.SDK.dll` / `Altium.SDK.Interfaces.dll` runtime libraries supplied by **Altium Developer** with C# SDK 4.0. A compiler, an IDE and an SDK ticket are not required for installation.
+Requirements: Windows x64, .NET Framework 4.8 and a licensed Altium Designer installation. The two Altium runtime DLLs are included in the compiled package. Altium Developer, an SDK, compiler, IDE and SDK ticket are not needed on the target PC.
 
-1. Download **`altium-revision-retirement-0.1.4-windows-x64.zip`** from [GitHub Releases](https://github.com/BenoitGaltier/altium-revision-retirement/releases/latest) and extract the complete ZIP. Choose the compiled Windows asset; the automatic Source code archives are for development.
+1. Download **`altium-revision-retirement-0.1.5-windows-x64.zip`** from [GitHub Releases](https://github.com/BenoitGaltier/altium-revision-retirement/releases/latest) and extract the complete ZIP. Choose the compiled Windows asset; the automatic Source code archives are for development.
 2. Close Altium Designer normally and handle your own unsaved documents.
 3. In 64-bit PowerShell, from the extracted package folder, run:
 
@@ -16,11 +16,11 @@ Requirements: Windows x64, .NET Framework 4.8, Altium Designer and matching loca
    .\Install.ps1
    ```
 
-4. The installer checks the payload and local Altium libraries, copies the precompiled DLL and resources, and creates or updates this extension's native local registration. Other extension entries are preserved. If a dependency is missing or incompatible, the error names the file and required action. If access is denied, rerun PowerShell as administrator.
+4. The installer checks the complete payload, including the bundled runtime libraries, copies it and creates or updates this extension's native local registration. Other extension entries are preserved. If a packaged file is missing or corrupted, download and extract the complete release again. If access is denied, rerun PowerShell as administrator.
 5. Restart Altium Designer. In **Extensions and Updates → Installed**, find **Altium Revision Retirement** and check its description and Fluidra logo.
 6. Open **Revision Retirement…** from the Tools menu in a schematic/PCB editor. If a customized menu hides the entry, run **`AltiumRevisionRetirement:Manage`** through **Run Process**.
 
-The runtime files are stored in `Extensions\AltiumRevisionRetirement` inside the selected Altium installation. The SDK DLLs are copied only from your licensed local installation; they and the SDK ticket are excluded from GitHub and release ZIPs. `Install.ps1 -CheckOnly` performs dependency checks without writing anything. See the [installation instructions](INSTALLATION.md) for downloaded-script warnings and custom paths.
+The runtime files are stored in `Extensions\AltiumRevisionRetirement` inside the selected Altium installation. The release includes the two Altium runtime DLLs and vendor notices; SDK sources, license files and tickets are excluded. `Install.ps1 -CheckOnly` verifies prerequisites and package integrity without writing anything. See the [installation instructions](INSTALLATION.md) for downloaded-script warnings and target paths.
 
 ## Window and controls
 
@@ -78,7 +78,7 @@ The batch stops on the first rejected or uncertain operation. It does not retry 
 | Inventory is incomplete or inconsistent | Stop and rescan. The extension refuses truncated or inconsistent results. |
 | Installer says Altium is still running | Close Designer normally before updating; do not force-terminate it. |
 | Installer says this is a source download | Download the compiled `windows-x64.zip` release asset and run its `Install.ps1`. |
-| Missing or incompatible Altium runtime library | Follow the named dependency error. Install Altium Developer with matching C# SDK 4.0 libraries, or select them with `-AltiumSdkRoot`. Compilation is not required. |
+| Missing or corrupt bundled Altium runtime library | Download and extract the complete Windows release again. Altium Developer is not required. |
 | Description or logo is missing from Installed extensions | Close Designer, rerun `Install.ps1` from the compiled package, and restart. |
 
 A local scan status report is available at `%LOCALAPPDATA%\AltiumRevisionRetirement\Diagnostics\last-scan.txt`. It records whether a scan is running, succeeded, failed or was cancelled, with its progress and any error details. It does not change workspace data and is not included in Git.

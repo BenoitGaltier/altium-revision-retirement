@@ -2,21 +2,21 @@
 
 Standalone C# extension loaded directly into Altium Designer. It finds superseded **component, schematic symbol and PCB footprint revisions** in the active workspace, lets you select them individually or together, and requests their existing lifecycle transition to **Obsolete**.
 
-**Version 0.1.4.** A compiled Windows installer is available in [GitHub Releases](https://github.com/BenoitGaltier/altium-revision-retirement/releases/latest). No compilation, IDE or EPD project is needed on the target PC. Native read-only scanning was verified with Designer 26.11.1.28 / C# SDK 4.0 / .NET Framework 4.8.
+**Version 0.1.5.** The compiled Windows package includes the two Altium runtime DLLs. Target PCs need Altium Designer and .NET Framework 4.8; Altium Developer, an SDK, compiler, IDE and EPD project are not required. Native read-only scanning was verified with Designer 26.11.1.28 / C# SDK 4.0 / .NET Framework 4.8.
 
 ## Install the compiled release
 
-Download **`altium-revision-retirement-0.1.4-windows-x64.zip`** from the release assets, extract it, close Altium Designer, and run this command in the extracted folder:
+Download **`altium-revision-retirement-0.1.5-windows-x64.zip`** from the release assets, extract it, close Altium Designer, and run this command in the extracted folder:
 
 ```powershell
 .\Install.ps1
 ```
 
-The installer uses the compiled DLL, validates package hashes and locates the local `Altium.SDK.dll` and `Altium.SDK.Interfaces.dll` libraries. If missing or incompatible, it names the required library and explains how to install Altium Developer with C# SDK 4.0 or select a compatible SDK directory. Proprietary SDK libraries and tickets are not redistributed. No compiler or SDK ticket is needed for runtime installation.
+The installer validates the extension, `Altium.SDK.dll` and `Altium.SDK.Interfaces.dll` bundled in the release, then copies them into this extension's own directory. No local SDK is consulted or downloaded. Vendor notices are included; SDK sources, tickets and license credentials are excluded. Source archives do not include SDK binaries.
 
 It creates or updates only this extension's local native registration, backs up its managed files and registry, and preserves other extension entries. Restart Designer and use **Tools → Revision Retirement…** in a schematic/PCB editor. The fallback is **Run Process** with **`AltiumRevisionRetirement:Manage`**.
 
-Use `Install.ps1 -CheckOnly` to verify prerequisites without changing installed files. See the [English installation instructions](docs/INSTALLATION.md) for downloaded-script warnings, library requirements, selecting another Altium instance, and backups; the [user guide](docs/USER_GUIDE.md) covers operation and removal.
+Use `Install.ps1 -CheckOnly` to verify prerequisites and bundled files without changing installed files. See the [English installation instructions](docs/INSTALLATION.md) for downloaded-script warnings, selecting another Altium instance and backups; the [user guide](docs/USER_GUIDE.md) covers operation and removal.
 
 GitHub's automatic **Source code** downloads contain the development project, not the compiled installer. Developers can run `scripts/package.ps1` with a licensed local SDK to build the compiled release and source ZIP, or `scripts/package.ps1 -SourceOnly` to create a source archive without a native SDK build. `scripts/build.ps1` remains a developer command and supports `-AltiumSdkRoot` for a custom SDK path. Installation never invokes it.
 

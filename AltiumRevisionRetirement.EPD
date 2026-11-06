@@ -17,7 +17,7 @@
     <ExtensionHelp>https://github.com/BenoitGaltier/altium-revision-retirement/blob/main/docs/USER_GUIDE.md</ExtensionHelp><ExtensionRequirements/><ExtensionSmallIcon>__SMALL_ICON__</ExtensionSmallIcon><ExtensionLargeIcon>__LARGE_ICON__</ExtensionLargeIcon>
     <ExtensionShortDescription>Review and obsolete superseded workspace revisions while protecting the latest revision.</ExtensionShortDescription>
     <ExtensionLongDescription>Find older revisions of symbols, PCB footprints and components in the active Altium 365 workspace. Select individual revisions or all eligible revisions, review their lifecycle transitions and dependencies, and move them to Obsolete with an audit note. The latest revision of each item is excluded and checked again before every change.</ExtensionLongDescription>
-    <ExtensionVersion>0.1.4.0</ExtensionVersion><ExtensionLifeCycleGUID/>
+    <ExtensionVersion>0.1.5.0</ExtensionVersion><ExtensionLifeCycleGUID/>
     <ExtensionTopLevelFolder>__BUILD_OUTPUT__</ExtensionTopLevelFolder><ExtensionSDKTicket>__SDK_TICKET__</ExtensionSDKTicket>
     <ReleaseNote/><ExtensionPublisherName>BenoitGaltier</ExtensionPublisherName>
   </ExtensionVersionOptions>
