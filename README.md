@@ -4,27 +4,23 @@ Standalone C# extension loaded directly into Altium Designer. It finds supersede
 
 No bridge, companion application, local web server or separately stored Altium credentials. The full interface, validation messages and confirmation dialog are in English. [English user guide](docs/USER_GUIDE.md) · [Documentation française](README.fr.md).
 
-**Version 0.1.3 — preview.** Native compilation, installation and read-only scanning were verified with Altium Designer 26.11.1.28 / C# SDK 4.0 / .NET Framework 4.8. The scan traversed the Components hierarchy and returned superseded Draft revisions for components, symbols and footprints. The Fluidra logo, English interface and guide link were visible in the running Designer process. Safety tests use an isolated fake gateway. Native lifecycle writes still require the [sandbox acceptance procedure](docs/VALIDATION.md); no live lifecycle transition was performed by the installer or these checks. This is an independent extension, not an Altium-certified product.
+**Version 0.1.4 — preview.** A compiled Windows installer is available in [GitHub Releases](https://github.com/BenoitGaltier/altium-revision-retirement/releases/latest). No compilation, IDE or EPD project is needed on the target PC. Native read-only scanning was verified with Designer 26.11.1.28 / C# SDK 4.0 / .NET Framework 4.8 and returned superseded Draft revisions for all three supported types. Native lifecycle writes still require the [sandbox acceptance procedure](docs/VALIDATION.md); no live lifecycle transition was performed by the installer or these checks. This is an independent extension, not an Altium-certified product.
 
-## Build and install
+## Install the compiled release
 
-Requirements: Windows x64, Altium Designer with the licensed **Altium Developer** extension / SDK 4.0 installed, and .NET Framework 4.8.
+Download **`altium-revision-retirement-0.1.4-windows-x64.zip`** from the release assets, extract it, close Altium Designer, and run this command in the extracted folder:
 
 ```powershell
-.\scripts\test.ps1
-.\scripts\build.ps1
+.\Install.ps1
 ```
 
-The build detects the newest installed Designer SDK through the Windows registry. You can supply `-AltiumSdkRoot 'C:\...\SDK4.0'` to target another installation. Build output stays inside `bin\Release`; it does not install anything or change Altium's registry.
+The installer uses the compiled DLL, validates package hashes and locates the local `Altium.SDK.dll` and `Altium.SDK.Interfaces.dll` libraries. If missing or incompatible, it names the required library and explains how to install Altium Developer with C# SDK 4.0 or select a compatible SDK directory. Proprietary SDK libraries and tickets are not redistributed. No compiler or SDK ticket is needed for runtime installation.
 
-1. In Altium Designer, open the generated **`AltiumRevisionRetirement.local.EPD`**. The tracked EPD is a template; build first to resolve all paths.
-2. Use **Install Extension** / **Update Local Installation** in Altium Developer, then close Designer normally.
-3. Run `scripts/build.ps1` again, then **`scripts/install.ps1`**. The installer copies and verifies runtime files in the registered extension folder, backs up the local registry and fills only this extension's English description, guide link and Fluidra thumbnails. Other extension registrations are checked for changes.
-4. Restart Designer. Use **DXP → Revision Retirement…**, or **Tools → Revision Retirement…** in a schematic/PCB editor. The fallback is **Run Process** with **`AltiumRevisionRetirement:Manage`**.
+It creates or updates only this extension's local native registration, backs up its managed files and registry, and preserves other extension entries. Restart Designer and use **Tools → Revision Retirement…** in a schematic/PCB editor. The fallback is **Run Process** with **`AltiumRevisionRetirement:Manage`**.
 
-The build keeps output in `bin\Release` even if Altium Developer rewrites the project output path. The install script requires Designer to be closed and never closes user documents itself. See the [English user guide](docs/USER_GUIDE.md) for the full installation, control translations, operating workflow, troubleshooting, updates and removal.
+Use `Install.ps1 -CheckOnly` to verify prerequisites without changing installed files. See the [English installation instructions](docs/INSTALLATION.md) for downloaded-script warnings, library requirements, selecting another Altium instance, and backups; the [user guide](docs/USER_GUIDE.md) covers operation and removal.
 
-SDK assemblies are resolved from your licensed local installation during the build. Neither those assemblies nor your SDK ticket are committed or included in the source ZIP. See [Altium's Developer installation workflow](https://www.altium.com/documentation/altium-dxp-developer).
+GitHub's automatic **Source code** downloads contain the development project, not the compiled installer. Developers can run `scripts/package.ps1` with a licensed local SDK to build the compiled release and source ZIP, or `scripts/package.ps1 -SourceOnly` to create a source archive without a native SDK build. `scripts/build.ps1` remains a developer command and supports `-AltiumSdkRoot` for a custom SDK path. Installation never invokes it.
 
 ![Offscreen UI preview with sample data, not a live workspace](docs/ui-preview.png)
 

@@ -15,3 +15,6 @@ jobs:
       - name: Verify English interface and selection controls
         shell: powershell
         run: .\scripts\test-ui.ps1
+      - name: Verify compiled installation and packaging with isolated fixtures
+        shell: powershell
+        run: .\tests\InstallerTests.ps1

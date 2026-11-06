@@ -1,70 +1,122 @@
 [CmdletBinding()]
-param()
+param([switch]$CheckOnly,[string]$AltiumApplication,[string]$AltiumExtensionsPath,[string]$AltiumSdkRoot,[string]$BackupRoot)
 $ErrorActionPreference='Stop'
-$project=Split-Path -Parent $PSScriptRoot
-$localEpd=Join-Path $project 'AltiumRevisionRetirement.local.EPD'
-if(-not (Test-Path -LiteralPath $localEpd)) {throw 'Run scripts/build.ps1 first.'}
-[xml]$epd=Get-Content -LiteralPath $localEpd -Raw
-$destination=[IO.Path]::GetFullPath([string]$epd.Main.ExtensionVersionOptions.ExtensionTopLevelFolder)
-if((Split-Path -Leaf $destination) -ne 'AltiumRevisionRetirement') {throw 'Unexpected extension destination. Rebuild the local EPD.'}
-$extensionRoot=Split-Path -Parent $destination
-if((Split-Path -Leaf $extensionRoot) -ne 'Extensions') {throw 'Destination must be inside the Altium Extensions directory.'}
+$package=Split-Path -Parent $PSScriptRoot
+$manifestPath=Join-Path $package 'manifest.json'
+if(-not (Test-Path -LiteralPath $manifestPath)) {
+    throw 'This is a source download, not the compiled installer. Download altium-revision-retirement-<version>-windows-x64.zip from GitHub Releases, extract it, and run .\Install.ps1. Do not run build.ps1 or package.ps1 on the target PC. Releases: https://github.com/BenoitGaltier/altium-revision-retirement/releases/latest'
+}
+if(-not [Environment]::Is64BitProcess) {throw 'Use 64-bit Windows PowerShell to install this x64 Altium extension.'}
+$framework=Get-ItemProperty -LiteralPath 'HKLM:\SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full' -Name Release -ErrorAction SilentlyContinue
+if(-not $framework -or [int]$framework.Release -lt 528040) {throw '.NET Framework 4.8 or later is required. Install the Windows .NET Framework 4.8 runtime, then rerun Install.ps1. No developer pack or compiler is needed.'}
+$manifest=Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+$hrid='AltiumRevisionRetirement'
+$extensionGuid='f19cf220-6b04-4d43-a356-eebe90b392e6'
+if($manifest.schemaVersion -ne 1 -or $manifest.extension.hrid -ne $hrid -or $manifest.extension.guid -ne $extensionGuid) {throw 'Invalid extension package identity.'}
+$version=[version][string]$manifest.extension.version
+$managedNames=@('AltiumRevisionRetirement.dll','AltiumRevisionRetirement.ins','AltiumRevisionRetirement.rcs','fluidra-extension-small.png','fluidra-extension-large.png','USER_GUIDE.en.md')
+$files=@($manifest.files)
+if($files.Count -ne $managedNames.Count -or @($files.name | ForEach-Object {([string]$_).ToLowerInvariant()} | Select-Object -Unique).Count -ne $managedNames.Count -or @($files | Where-Object {$_.name -notin $managedNames}).Count -gt 0) {throw 'The package file list is incomplete or invalid.'}
+foreach($file in $files) {
+    $path=Join-Path $package ('payload\'+$file.name)
+    if(-not (Test-Path -LiteralPath $path) -or $file.sha256 -notmatch '^[a-fA-F0-9]{64}$' -or (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash -ne $file.sha256) {throw "Package integrity check failed: $($file.name). Download and extract the compiled release ZIP again."}
+}
+if(-not $AltiumExtensionsPath) {
+    $builds=@(Get-ChildItem 'HKLM:\SOFTWARE\Altium\Builds' | ForEach-Object {Get-ItemProperty $_.PSPath} | Where-Object {$_.Installed -eq $true})
+    if($AltiumApplication) {$builds=@($builds | Where-Object {$_.Application -eq $AltiumApplication})}
+    $selected=$builds | Sort-Object {[version]$_.FullBuild} -Descending | Select-Object -First 1
+    if(-not $selected) {throw 'Altium Designer installation not found. Select the correct registry Application value with -AltiumApplication, or specify its -AltiumExtensionsPath.'}
+    $application=[string]$selected.Application
+    if(-not $application.StartsWith('Altium\',[StringComparison]::OrdinalIgnoreCase)) {$application='Altium\'+$application}
+    $AltiumExtensionsPath=Join-Path $env:ProgramData ($application+'\Extensions')
+    Write-Output ('Selected Altium Designer '+$selected.FullBuild+' ('+$application+').')
+}
+$extensionRoot=[IO.Path]::GetFullPath($AltiumExtensionsPath.TrimEnd('\','/'))
+if((Split-Path -Leaf $extensionRoot) -ne 'Extensions') {throw '-AltiumExtensionsPath must name the installed Altium Extensions directory.'}
 $registryPath=Join-Path $extensionRoot 'ExtensionsRegistry.xml'
+if(-not (Test-Path -LiteralPath $registryPath)) {throw "Altium extension registry not found: $registryPath. Select a valid existing Altium installation."}
+$destination=Join-Path $extensionRoot $hrid
+if((Test-Path -LiteralPath $destination) -and ((Get-Item -LiteralPath $destination).Attributes -band [IO.FileAttributes]::ReparsePoint)) {throw 'The extension destination must not be a junction or symbolic link.'}
+if(-not $AltiumSdkRoot) {$AltiumSdkRoot=Join-Path $extensionRoot 'Altium Developer\SDK4.0'}
+$AltiumSdkRoot=[IO.Path]::GetFullPath($AltiumSdkRoot.TrimEnd('\','/'))
+$libraryPaths=@{'Altium.SDK.dll'=(Join-Path $AltiumSdkRoot 'CSharp\Altium.SDK.dll');'Altium.SDK.Interfaces.dll'=(Join-Path (Split-Path -Parent $AltiumSdkRoot) 'Altium.SDK.Interfaces.dll')}
+$dependencies=@($manifest.dependencies)
+if($dependencies.Count -ne 2 -or @($dependencies.name | Select-Object -Unique).Count -ne 2) {throw 'Invalid runtime dependency list.'}
+foreach($dependency in $dependencies) {
+    if(-not $libraryPaths.ContainsKey([string]$dependency.name)) {throw 'Unexpected runtime dependency.'}
+    $path=$libraryPaths[[string]$dependency.name]
+    if(-not (Test-Path -LiteralPath $path)) {throw "Missing runtime library: $($dependency.name). Expected: $path. Install Altium Developer with C# SDK 4.0 through Altium Designer Extensions and Updates, then close Designer and rerun Install.ps1. No compiler or local build is needed. If already installed elsewhere, pass -AltiumSdkRoot 'C:\path\to\SDK4.0'."}
+    if($dependency.sha256 -notmatch '^[a-fA-F0-9]{64}$' -or (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash -ne $dependency.sha256) {throw "Incompatible runtime library: $($dependency.name). This release requires $($dependency.assemblyIdentity), SHA256 $($dependency.sha256). Use the matching local Altium Developer SDK 4.0 libraries or a release built for your Altium version. SDK files are not downloaded or replaced by this installer."}
+    Write-Output ('Runtime dependency verified: '+$dependency.name+' ('+$dependency.assemblyIdentity+').')
+}
 [xml]$registry=Get-Content -LiteralPath $registryPath -Raw
-$entries=@($registry.Extensions.Item | Where-Object {$_.HRID -eq 'AltiumRevisionRetirement'})
-if($entries.Count -ne 1 -or [IO.Path]::GetFullPath([string]$entries[0].Path) -ne $destination) {
-    throw 'Open the generated local EPD in Altium Developer and use Install Extension first. This script only updates an existing registration.'
-}
-if(@(Get-Process X2 -ErrorAction SilentlyContinue).Count -gt 0) {
-    throw 'Close Altium Designer before updating runtime files and display metadata. Unsaved documents are never closed by this script.'
-}
-$files=@('AltiumRevisionRetirement.dll','AltiumRevisionRetirement.ins','AltiumRevisionRetirement.rcs','Altium.SDK.dll','Altium.SDK.Interfaces.dll')
-$source=Join-Path $project 'bin\Release'
-foreach($file in $files) {if(-not (Test-Path -LiteralPath (Join-Path $source $file))) {throw "Missing build output: $file"}}
-$backup=Join-Path $project ('.artifacts\installation\'+[DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss')+'-'+[Guid]::NewGuid().ToString('N'))
-New-Item -ItemType Directory -Path $backup -Force | Out-Null
+if($registry.DocumentElement.Name -ne 'Extensions') {throw 'Unexpected Altium extension registry format.'}
+$entries=@($registry.Extensions.Item | Where-Object {$_.HRID -eq $hrid})
+if($entries.Count -gt 1) {throw 'Duplicate extension registrations found. No files were changed.'}
+if($entries.Count -eq 1 -and ([IO.Path]::GetFullPath([string]$entries[0].Path) -ne $destination -or [string]$entries[0].Guid -ne $extensionGuid)) {throw 'This extension is already registered with a different path or GUID. No files were changed.'}
+Write-Output ('Compiled extension '+$version+'; destination: '+$destination)
+if($CheckOnly) {Write-Output 'Checks passed. No files or registrations changed. Close Altium Designer and run Install.ps1 without -CheckOnly to install.';return}
+if(@(Get-Process X2 -ErrorAction SilentlyContinue).Count -gt 0) {throw 'Close Altium Designer before installation. The installer never closes documents or terminates Altium.'}
+if(-not $BackupRoot) {$BackupRoot=Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'AltiumRevisionRetirement\InstallationBackups'}
+$backup=Join-Path ([IO.Path]::GetFullPath($BackupRoot)) ([DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss')+'-'+[Guid]::NewGuid().ToString('N'))
+[IO.Directory]::CreateDirectory($backup) | Out-Null
 Copy-Item -LiteralPath $registryPath -Destination (Join-Path $backup 'ExtensionsRegistry.xml')
 $registryHash=(Get-FileHash -LiteralPath $registryPath -Algorithm SHA256).Hash
-$otherEntries=@($registry.Extensions.Item | Where-Object {$_.HRID -ne 'AltiumRevisionRetirement'} | ForEach-Object {$_.OuterXml})
-$receipt=@()
-foreach($file in $files) {
-    $target=Join-Path $destination $file
-    if(Test-Path -LiteralPath $target) {Copy-Item -LiteralPath $target -Destination (Join-Path $backup $file)}
-    $origin=Join-Path $source $file
-    Copy-Item -LiteralPath $origin -Destination $target -Force
-    $expected=(Get-FileHash -LiteralPath $origin -Algorithm SHA256).Hash
-    $actual=(Get-FileHash -LiteralPath $target -Algorithm SHA256).Hash
-    if($expected -ne $actual) {throw "Installed hash mismatch: $file"}
-    $receipt+=[pscustomobject]@{File=$file;SHA256=$actual}
+$otherEntries=@($registry.Extensions.Item | Where-Object {$_.HRID -ne $hrid} | ForEach-Object {$_.OuterXml})
+$sources=@{};$expectedHashes=@{};$previous=@{}
+foreach($file in $files) {$sources[$file.name]=Join-Path $package ('payload\'+$file.name);$expectedHashes[$file.name]=$file.sha256}
+foreach($dependency in $dependencies) {$sources[$dependency.name]=$libraryPaths[$dependency.name];$expectedHashes[$dependency.name]=$dependency.sha256}
+foreach($name in $sources.Keys) {
+    $target=Join-Path $destination $name
+    $previous[$name]=Test-Path -LiteralPath $target
+    if($previous[$name] -and ((Get-Item -LiteralPath $target).Attributes -band [IO.FileAttributes]::ReparsePoint)) {throw 'Managed runtime files must not be symbolic links.'}
+    if($previous[$name]) {Copy-Item -LiteralPath $target -Destination (Join-Path $backup $name)}
 }
-$guide=Join-Path $project 'docs\USER_GUIDE.md'
-if(Test-Path -LiteralPath $guide) {Copy-Item -LiteralPath $guide -Destination (Join-Path $destination 'USER_GUIDE.en.md') -Force}
-foreach($icon in @('fluidra-extension-small.png','fluidra-extension-large.png')) {
-    Copy-Item -LiteralPath (Join-Path $project "assets\$icon") -Destination (Join-Path $destination $icon) -Force
-}
-# Altium Developer creates the registration. Fill only this extension's display metadata.
-$entry=$entries[0]
-$entry.Title=[string]$epd.Main.ExtensionVersionOptions.ExtensionTitle
-$entry.CreatedBy=[string]$epd.Main.ExtensionVersionOptions.ExtensionPublisherName
-$entry.ShortDescription=[string]$epd.Main.ExtensionVersionOptions.ExtensionShortDescription
-$entry.LongDescription=[string]$epd.Main.ExtensionVersionOptions.ExtensionLongDescription
-$entry.Help=[string]$epd.Main.ExtensionVersionOptions.ExtensionHelp
-$entry.ReadMe=[string]$epd.Main.ExtensionVersionOptions.ExtensionHelp
-$entry.SmallImage=Join-Path $destination 'fluidra-extension-small.png'
-$entry.LargeImage=Join-Path $destination 'fluidra-extension-large.png'
-$entry.Version=[string]$epd.Main.ExtensionVersionOptions.ExtensionVersion
-$entry.DateInstalled=[DateTime]::Now.ToOADate().ToString([Globalization.CultureInfo]::InvariantCulture)
-if((Get-FileHash -LiteralPath $registryPath -Algorithm SHA256).Hash -ne $registryHash) {throw 'Altium extension registry changed during installation. Metadata update stopped.'}
-$temporary=Join-Path $extensionRoot ('ExtensionsRegistry.AltiumRevisionRetirement.'+[Guid]::NewGuid().ToString('N')+'.tmp')
-$registry.Save($temporary)
-[IO.File]::Replace($temporary,$registryPath,(Join-Path $backup 'ExtensionsRegistry.replaced.xml'))
-[xml]$verified=Get-Content -LiteralPath $registryPath -Raw
-$afterOthers=@($verified.Extensions.Item | Where-Object {$_.HRID -ne 'AltiumRevisionRetirement'} | ForEach-Object {$_.OuterXml})
-if(($otherEntries -join "`n") -ne ($afterOthers -join "`n")) {throw 'Unexpected change to another extension registration.'}
-$own=@($verified.Extensions.Item | Where-Object {$_.HRID -eq 'AltiumRevisionRetirement'})
-if($own.Count -ne 1 -or $own[0].ShortDescription -ne $entry.ShortDescription -or $own[0].Version -ne $entry.Version) {throw 'Installed metadata verification failed.'}
-$receipt | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $backup 'installed-files.json') -Encoding utf8
-Write-Output "Installed files verified at $destination"
-Write-Output 'English description, help link and Fluidra thumbnails verified; other extension registrations preserved.'
-Write-Output "Backup and receipt: $backup"
-Write-Output 'Restart Altium Designer to load the extension, then open Revision Retirement from the menu. No lifecycle change was performed.'
+$registryCommitted=$false
+$temporary=Join-Path $extensionRoot ('ExtensionsRegistry.'+$hrid+'.'+[Guid]::NewGuid().ToString('N')+'.tmp')
+try {
+    [IO.Directory]::CreateDirectory($destination) | Out-Null
+    foreach($name in $sources.Keys) {
+        $target=Join-Path $destination $name
+        Copy-Item -LiteralPath $sources[$name] -Destination $target -Force
+        if((Get-FileHash -LiteralPath $target -Algorithm SHA256).Hash -ne $expectedHashes[$name]) {throw "Installed hash mismatch: $name"}
+    }
+    if($entries.Count -eq 0) {
+        # Registration structure generated by native Altium Developer, limited to this HRID.
+        [xml]$native='<Item HRID="AltiumRevisionRetirement" Guid="f19cf220-6b04-4d43-a356-eebe90b392e6"><Path/><Status>0</Status><VaultGuid/><CreatedBy/><CategoryGuid>793A1F67-0B22-4E01-A5DE-3176A1E8C60D</CategoryGuid><CategoryName/><ReadMe/><Help/><Requirements/><Title/><ShortDescription/><LongDescription/><SmallImage/><LargeImage/><Version/><VersionGuid/><ReleasedDate>0</ReleasedDate><ReleaseNotes/><DateInstalled>0</DateInstalled><PlatformVersions><DXP BuildNumber="1.0.6.0"/><EDP BuildNumber="10.0.6.0"/><MaxDXP BuildNumber="0.0.0.0"/><MaxEDP BuildNumber="0.0.0.0"/></PlatformVersions></Item>'
+        $entry=$registry.ImportNode($native.DocumentElement,$true)
+        [void]$registry.DocumentElement.AppendChild($entry)
+    } else {$entry=$entries[0]}
+    $entry.Path=[string]$destination
+    $entry.Title=[string]$manifest.extension.title
+    $entry.CreatedBy=[string]$manifest.extension.publisher
+    $entry.ShortDescription=[string]$manifest.extension.shortDescription
+    $entry.LongDescription=[string]$manifest.extension.longDescription
+    $entry.Help=[string]$manifest.extension.help
+    $entry.ReadMe=[string]$manifest.extension.help
+    $entry.SmallImage=[string](Join-Path $destination 'fluidra-extension-small.png')
+    $entry.LargeImage=[string](Join-Path $destination 'fluidra-extension-large.png')
+    $entry.Version=[string]$version
+    $entry.DateInstalled=[DateTime]::Now.ToOADate().ToString([Globalization.CultureInfo]::InvariantCulture)
+    if((Get-FileHash -LiteralPath $registryPath -Algorithm SHA256).Hash -ne $registryHash) {throw 'Altium extension registry changed during installation. Registration was not replaced.'}
+    $registry.Save($temporary)
+    [xml]$candidate=Get-Content -LiteralPath $temporary -Raw
+    $candidateOthers=@($candidate.Extensions.Item | Where-Object {$_.HRID -ne $hrid} | ForEach-Object {$_.OuterXml})
+    if(($candidateOthers -join "`n") -ne ($otherEntries -join "`n")) {throw 'Another extension registration would change. Installation stopped.'}
+    [IO.File]::Replace($temporary,$registryPath,(Join-Path $backup 'ExtensionsRegistry.replaced.xml'))
+    $registryCommitted=$true
+    @($sources.Keys | ForEach-Object {[pscustomobject]@{File=$_;SHA256=$expectedHashes[$_]}}) | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $backup 'installed-files.json') -Encoding UTF8
+} catch {
+    $failure=$_
+    if(-not $registryCommitted) {
+        foreach($name in $previous.Keys) {
+            $target=Join-Path $destination $name
+            if($previous[$name]) {Copy-Item -LiteralPath (Join-Path $backup $name) -Destination $target -Force}
+            elseif(Test-Path -LiteralPath $target) {Remove-Item -LiteralPath $target -Force}
+        }
+    }
+    throw "Installation failed: $($failure.Exception.Message) Backup: $backup. If access was denied, run PowerShell as administrator."
+} finally {if(Test-Path -LiteralPath $temporary) {Remove-Item -LiteralPath $temporary -Force}}
+Write-Output ('Installed and verified Altium Revision Retirement '+$version+'.')
+Write-Output ('Backup and receipt: '+$backup)
+Write-Output 'Restart Altium Designer, then open Tools > Revision Retirement. No compilation or workspace lifecycle change was performed.'

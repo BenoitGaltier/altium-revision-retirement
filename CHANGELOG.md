@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.4 — 6 November 2026
+
+- Publish a compiled `windows-x64.zip` release with `Install.ps1`. Target PCs do not compile code, open EPD projects or need an IDE or SDK ticket.
+- Create or update only this extension's local native registration, preserve other entries, verify installed hashes and retain backups. Restore managed files if deployment fails before registration replacement.
+- Check the local proprietary Altium runtime libraries against the build-reference hashes; name missing or incompatible dependencies and explain how to obtain or select them. Libraries and tickets are excluded from releases.
+- Add read-only `-CheckOnly`, explicit target/SDK paths, and clear guidance when a source archive is downloaded instead of the compiled installer.
+- Fix XML path assignments and native build argument quoting under Windows PowerShell 5.1, including paths with spaces. Keep source-only packaging independent of a native SDK build.
+- Add 19 isolated installer and packaging tests, including first installation without compilation, updates, .NET/runtime dependency checks, integrity checks, rollback, registration conflicts and preservation of other extensions. Update the English guides.
+
 ## 0.1.3 — 3 November 2026
 
 - Identify Components as the explicit library root and read its complete recursive subtree before scanning items.

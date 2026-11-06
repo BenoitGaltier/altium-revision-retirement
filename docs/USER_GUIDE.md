@@ -6,31 +6,21 @@ The extension runs directly inside Altium Designer. It uses the active Altium 36
 
 ## Installation
 
-Requirements: Windows x64, Altium Designer, the licensed **Altium Developer** extension with C# SDK 4.0, and .NET Framework 4.8.
+Requirements: Windows x64, .NET Framework 4.8, Altium Designer and matching local `Altium.SDK.dll` / `Altium.SDK.Interfaces.dll` runtime libraries supplied by **Altium Developer** with C# SDK 4.0. A compiler, an IDE and an SDK ticket are not required for installation.
 
-1. Clone this repository and run the following commands in its root directory:
-
-   ```powershell
-   .\scripts\test.ps1
-   .\scripts\build.ps1
-   ```
-
-2. In Altium Designer, open **`AltiumRevisionRetirement.local.EPD`**. The build generates this file with the correct local source, SDK, icon and installation paths. Do not open the tracked EPD template directly.
-3. In Altium Developer, choose **Install Extension**. Opening the EPD may already create the local registration; in that case the command becomes **Update Local Installation**. This step registers the extension and installs its INS/RCS resources.
-4. Close Altium Designer normally. Save or cancel your own document changes as appropriate. The installer never closes documents or terminates Altium.
-5. Run:
+1. Download **`altium-revision-retirement-0.1.4-windows-x64.zip`** from [GitHub Releases](https://github.com/BenoitGaltier/altium-revision-retirement/releases/latest) and extract the complete ZIP. Choose the compiled Windows asset; the automatic Source code archives are for development.
+2. Close Altium Designer normally and handle your own unsaved documents.
+3. In 64-bit PowerShell, from the extracted package folder, run:
 
    ```powershell
-   .\scripts\build.ps1
-   .\scripts\install.ps1
+   .\Install.ps1
    ```
 
-   The build keeps its output in `bin\Release`, even if Altium Developer changed the project output path. The install script copies the runtime files into the registered extension directory, verifies their SHA-256 hashes, and adds the English description, help link and Fluidra thumbnails to this extension's local registration. It saves a backup and verifies that the other extension registrations are unchanged. Access to Altium's ProgramData directory may require an elevated PowerShell session, depending on local permissions.
+4. The installer checks the payload and local Altium libraries, copies the precompiled DLL and resources, and creates or updates this extension's native local registration. Other extension entries are preserved. If a dependency is missing or incompatible, the error names the file and required action. If access is denied, rerun PowerShell as administrator.
+5. Restart Altium Designer. In **Extensions and Updates → Installed**, find **Altium Revision Retirement** and check its description and Fluidra logo.
+6. Open **Revision Retirement…** from the Tools menu in a schematic/PCB editor. If a customized menu hides the entry, run **`AltiumRevisionRetirement:Manage`** through **Run Process**.
 
-6. Start Altium Designer. In **Extensions and Updates → Installed**, find **Altium Revision Retirement** and check its description and Fluidra logo.
-7. Open **Revision Retirement…** from the DXP menu, or the Tools menu in a schematic/PCB editor. If a customized menu hides the entry, run **`AltiumRevisionRetirement:Manage`** through **Run Process**.
-
-The extension's runtime files are stored in the Altium installation's `Extensions\AltiumRevisionRetirement` directory. The SDK DLLs are copied only from your licensed local installation. SDK binaries and the SDK ticket are not stored in GitHub.
+The runtime files are stored in `Extensions\AltiumRevisionRetirement` inside the selected Altium installation. The SDK DLLs are copied only from your licensed local installation; they and the SDK ticket are excluded from GitHub and release ZIPs. `Install.ps1 -CheckOnly` performs dependency checks without writing anything. See the [installation instructions](INSTALLATION.md) for downloaded-script warnings and custom paths.
 
 ## Window and controls
 
@@ -87,14 +77,15 @@ The batch stops on the first rejected or uncertain operation. It does not retry 
 | Model is used by a non-Obsolete parent | Keep the model, or explicitly select an eligible old parent too. A latest parent remains protected. |
 | Inventory is incomplete or inconsistent | Stop and rescan. The extension refuses truncated or inconsistent results. |
 | Installer says Altium is still running | Close Designer normally before updating; do not force-terminate it. |
-| Source project changed after opening the EPD | Altium Developer may rewrite its output path. The build script overrides that path so runtime output still goes into `bin\Release`. |
-| Description or logo is missing from Installed extensions | Close Designer, rerun the build and install scripts, and restart. The script fills only this extension's display metadata. |
+| Installer says this is a source download | Download the compiled `windows-x64.zip` release asset and run its `Install.ps1`. |
+| Missing or incompatible Altium runtime library | Follow the named dependency error. Install Altium Developer with matching C# SDK 4.0 libraries, or select them with `-AltiumSdkRoot`. Compilation is not required. |
+| Description or logo is missing from Installed extensions | Close Designer, rerun `Install.ps1` from the compiled package, and restart. |
 
 A local scan status report is available at `%LOCALAPPDATA%\AltiumRevisionRetirement\Diagnostics\last-scan.txt`. It records whether a scan is running, succeeded, failed or was cancelled, with its progress and any error details. It does not change workspace data and is not included in Git.
 
 ## Updates and removal
 
-For an update, close Designer, pull the new source, run the tests, build and install scripts, then restart. Local runtime backups and installation receipts are kept under `.artifacts\installation` in the source directory; these machine-specific files are excluded from Git.
+For an update, download and extract the new compiled Windows release, close Designer, run `Install.ps1`, then restart. Backups and hash receipts are kept under `%LOCALAPPDATA%\AltiumRevisionRetirement\InstallationBackups`; these machine-specific files are excluded from Git.
 
 Remove the extension through **Extensions and Updates → Installed**, then restart Designer. Removing the extension does not reverse lifecycle transitions already accepted by the workspace.
 

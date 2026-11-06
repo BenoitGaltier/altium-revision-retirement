@@ -9,20 +9,24 @@ if(-not $AltiumSdkRoot) {
     if(-not $application.StartsWith('Altium\',[StringComparison]::OrdinalIgnoreCase)) {$application="Altium\$application"}
     $AltiumSdkRoot=Join-Path $env:ProgramData "$application\Extensions\Altium Developer\SDK4.0"
 }
+$AltiumSdkRoot=[IO.Path]::GetFullPath($AltiumSdkRoot.TrimEnd('\','/'))
 foreach($file in @('CSharp\Altium.SDK.dll','..\Altium.SDK.Interfaces.dll','SDK.ticket')) {
-    if(-not (Test-Path -LiteralPath (Join-Path $AltiumSdkRoot $file))) {throw "Missing licensed Altium SDK file: $file"}
+    if(-not (Test-Path -LiteralPath (Join-Path $AltiumSdkRoot $file))) {
+        throw "The local Altium Developer SDK is missing or incomplete. Missing file: $(Join-Path $AltiumSdkRoot $file). Developers: install Altium Developer with C# SDK 4.0 and rerun scripts/build.ps1, or pass -AltiumSdkRoot 'C:\path\to\SDK4.0'. End users: download the compiled windows-x64 release and run Install.ps1; no compilation is needed. The GitHub source ZIP does not contain licensed SDK files."
+    }
 }
 $msbuild=Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\MSBuild.exe'
-$localOutput=Join-Path $project 'bin\Release\'
+# A trailing backslash escapes the closing native argument quote in Windows PowerShell 5.1.
+$localOutput=(Join-Path $project 'bin\Release').Replace('\','/')+'/'
 & $msbuild (Join-Path $project 'AltiumRevisionRetirement.csproj') /t:Rebuild /p:Configuration=Release "/p:AltiumSdkRoot=$AltiumSdkRoot" "/p:OutputPath=$localOutput" /nologo /verbosity:minimal
 if($LASTEXITCODE -ne 0) {throw 'Extension build failed.'}
 # A local EPD has the complete Developer schema and paths resolved for this installation.
 [xml]$epd=Get-Content -LiteralPath (Join-Path $project 'AltiumRevisionRetirement.EPD') -Raw
-$epd.Main.ExtensionOptions.ExtensionSourceLocation=$project
+$epd.Main.ExtensionOptions.ExtensionSourceLocation=[string]$project
 $extensionRoot=Split-Path -Parent (Split-Path -Parent $AltiumSdkRoot)
-$epd.Main.ExtensionVersionOptions.ExtensionTopLevelFolder=(Join-Path $extensionRoot 'AltiumRevisionRetirement')
-$epd.Main.ExtensionVersionOptions.ExtensionSDKTicket=(Join-Path $AltiumSdkRoot 'SDK.ticket')
-$epd.Main.ExtensionVersionOptions.ExtensionSmallIcon=(Join-Path $project 'assets\fluidra-extension-small.png')
-$epd.Main.ExtensionVersionOptions.ExtensionLargeIcon=(Join-Path $project 'assets\fluidra-extension-large.png')
+$epd.Main.ExtensionVersionOptions.ExtensionTopLevelFolder=[string](Join-Path $extensionRoot 'AltiumRevisionRetirement')
+$epd.Main.ExtensionVersionOptions.ExtensionSDKTicket=[string](Join-Path $AltiumSdkRoot 'SDK.ticket')
+$epd.Main.ExtensionVersionOptions.ExtensionSmallIcon=[string](Join-Path $project 'assets\fluidra-extension-small.png')
+$epd.Main.ExtensionVersionOptions.ExtensionLargeIcon=[string](Join-Path $project 'assets\fluidra-extension-large.png')
 $epd.Save((Join-Path $project 'AltiumRevisionRetirement.local.EPD'))
 Write-Output "Built native extension and local EPD in $project"

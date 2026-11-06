@@ -2,20 +2,19 @@
 
 Extension C# **autonome**, chargée directement dans Altium Designer, pour passer les anciennes révisions de **composants, symboles et footprints** à l'état **Obsolete** dans le workspace actif. Elle ne dépend d'aucun bridge, serveur local ou application compagnon.
 
-**Version 0.1.3 de prévalidation** : compilation, installation et scan natif en lecture seule vérifiés avec Altium Designer Agile 26.11.1.28 / SDK C# 4.0 / .NET Framework 4.8. Le scan parcourt l'arborescence Components et remonte des anciennes révisions Draft de composants, symboles et footprints. Le logo Fluidra, l'interface anglaise et le lien vers le guide sont visibles dans Altium Designer. Les tests automatisés utilisent une base simulée. Les transitions natives restent à vérifier avec la [procédure de validation](docs/VALIDATION.md). Aucune transition de lifecycle réelle n'a été exécutée par l'installation ou ces contrôles.
+**Version 0.1.4 de prévalidation** : une archive Windows avec la DLL compilée est disponible dans les [Releases GitHub](https://github.com/BenoitGaltier/altium-revision-retirement/releases/latest). L'installation ne compile rien et ne nécessite ni IDE ni projet EPD. Le scan natif a été vérifié avec Altium Designer Agile 26.11.1.28 / SDK C# 4.0 / .NET Framework 4.8. Les transitions natives restent à vérifier avec la [procédure de validation](docs/VALIDATION.md). Aucune transition réelle n'a été exécutée par ces contrôles.
 
 ## Installation
 
-Prérequis : Windows x64, Altium Designer, extension **Altium Developer** et SDK 4.0 sous licence, .NET Framework 4.8.
+Télécharger **`altium-revision-retirement-0.1.4-windows-x64.zip`** dans les assets de la release, extraire l'archive, fermer Altium puis lancer dans son dossier :
 
 ```powershell
-.\scripts\test.ps1
-.\scripts\build.ps1
+.\Install.ps1
 ```
 
-Ouvrir ensuite **`AltiumRevisionRetirement.local.EPD`** dans Altium Designer, puis utiliser **Install Extension / Update Local Installation** dans Altium Developer. Fermer ensuite Designer normalement, relancer `scripts/build.ps1`, puis exécuter **`scripts/install.ps1`** pour copier les DLL et configurer le logo et la description. Redémarrer Designer pour charger l'extension. Le build conserve une sortie locale même si Developer réécrit le chemin de sortie du projet.
+Prérequis : Windows x64, .NET Framework 4.8 et les DLL locales `Altium.SDK.dll` / `Altium.SDK.Interfaces.dll` fournies par Altium Developer avec le SDK C# 4.0. L'installateur indique la bibliothèque manquante ou incompatible et la marche à suivre. Aucun compilateur ni ticket SDK n'est requis pour l'installation. Les bibliothèques propriétaires ne sont pas incluses dans l'archive.
 
-Ouvrir **DXP → Revision Retirement…**, ou **Tools → Revision Retirement…** dans un éditeur schématique/PCB. Le process **`AltiumRevisionRetirement:Manage`** via **Run Process** reste disponible. Les DLL du SDK et le ticket proviennent uniquement de l'installation locale et ne sont pas stockés dans GitHub. Le fichier EPD suivi par Git est un modèle : le build produit le fichier `.local.EPD` avec les chemins résolus.
+Redémarrer Altium puis ouvrir **Tools → Revision Retirement…** dans un éditeur schématique/PCB. `Install.ps1 -CheckOnly` vérifie les dépendances sans modifier l'installation. Les [instructions d'installation en anglais](docs/INSTALLATION.md) détaillent les avertissements Windows, les chemins personnalisés et les sauvegardes. Les téléchargements GitHub « Source code » sont destinés au développement ; choisir l'asset `windows-x64.zip` pour installer.
 
 Le [guide utilisateur complet en anglais](docs/USER_GUIDE.md) couvre l'installation, les contrôles, le workflow, les erreurs et la désinstallation. Il est aussi accessible depuis le bandeau de l'extension.
 
