@@ -6,6 +6,7 @@
 - Remove the target-PC Altium Developer/SDK dependency and custom SDK path option. Installation uses only the bundled payload and preserves other SDK or Altium system libraries.
 - Verify first installation without an Altium Developer folder, corrupted or missing bundled DLLs, and independence from unrelated local SDK versions. Add an isolated real-assembly/UI load probe.
 - Keep SDK sources, tickets, license credentials and SDK binaries out of source archives and Git history. Runtime redistribution remains governed by the applicable Altium agreement.
+- Host the complete runtime bundle in a private repository for authorized internal Fluidra users; keep vendor binaries out of the public source repository and its releases.
 
 ## 0.1.4 — 6 November 2026
 

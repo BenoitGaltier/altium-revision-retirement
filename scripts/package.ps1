@@ -58,6 +58,7 @@ $manifest=[ordered]@{
         help=[string]$epd.Main.ExtensionVersionOptions.ExtensionHelp
     }
     platform='Windows x64 / .NET Framework 4.8'
+    distribution='Fluidra internal / private release repository'
     testedDesignerBuild='26.11.1.28'
     files=$payloadFiles;dependencies=$dependencies
 }

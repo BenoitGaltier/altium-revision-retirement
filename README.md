@@ -2,11 +2,11 @@
 
 Standalone C# extension loaded directly into Altium Designer. It finds superseded **component, schematic symbol and PCB footprint revisions** in the active workspace, lets you select them individually or together, and requests their existing lifecycle transition to **Obsolete**.
 
-**Version 0.1.5.** The compiled Windows package includes the two Altium runtime DLLs. Target PCs need Altium Designer and .NET Framework 4.8; Altium Developer, an SDK, compiler, IDE and EPD project are not required. Native read-only scanning was verified with Designer 26.11.1.28 / C# SDK 4.0 / .NET Framework 4.8.
+**Version 0.1.5.** The compiled Windows package includes the two Altium runtime DLLs and is distributed through the [private Fluidra release repository](https://github.com/BenoitGaltier/altium-revision-retirement-fluidra-releases/releases/latest). Target PCs need Altium Designer and .NET Framework 4.8; Altium Developer, an SDK, compiler, IDE and EPD project are not required. Native read-only scanning was verified with Designer 26.11.1.28 / C# SDK 4.0 / .NET Framework 4.8.
 
 ## Install the compiled release
 
-Download **`altium-revision-retirement-0.1.5-windows-x64.zip`** from the release assets, extract it, close Altium Designer, and run this command in the extracted folder:
+Authorized Fluidra users can download **`altium-revision-retirement-0.1.5-windows-x64.zip`** from the private release assets, extract it, close Altium Designer, and run this command in the extracted folder:
 
 ```powershell
 .\Install.ps1
