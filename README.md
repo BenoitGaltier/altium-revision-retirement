@@ -2,9 +2,7 @@
 
 Standalone C# extension loaded directly into Altium Designer. It finds superseded **component, schematic symbol and PCB footprint revisions** in the active workspace, lets you select them individually or together, and requests their existing lifecycle transition to **Obsolete**.
 
-No bridge, companion application, local web server or separately stored Altium credentials. The full interface, validation messages and confirmation dialog are in English. [English user guide](docs/USER_GUIDE.md) · [Documentation française](README.fr.md).
-
-**Version 0.1.4 — preview.** A compiled Windows installer is available in [GitHub Releases](https://github.com/BenoitGaltier/altium-revision-retirement/releases/latest). No compilation, IDE or EPD project is needed on the target PC. Native read-only scanning was verified with Designer 26.11.1.28 / C# SDK 4.0 / .NET Framework 4.8 and returned superseded Draft revisions for all three supported types. Native lifecycle writes still require the [sandbox acceptance procedure](docs/VALIDATION.md); no live lifecycle transition was performed by the installer or these checks. This is an independent extension, not an Altium-certified product.
+**Version 0.1.4.** A compiled Windows installer is available in [GitHub Releases](https://github.com/BenoitGaltier/altium-revision-retirement/releases/latest). No compilation, IDE or EPD project is needed on the target PC. Native read-only scanning was verified with Designer 26.11.1.28 / C# SDK 4.0 / .NET Framework 4.8.
 
 ## Install the compiled release
 
@@ -37,26 +35,14 @@ The inventory starts at the workspace's **Components** root and loads its comple
 
 A flushed CSV journal is written to `%LOCALAPPDATA%\AltiumRevisionRetirement\Audit`. Each attempted change has an `intent` entry before the SDK write and a `verified` entry after a fresh read. If a response is lost, the batch stops without retrying. Check the revision's native Altium timeline before any manual retry.
 
-## Protection and scope
-
-- Workspace and user identity are captured at scan time and checked again during preparation and execution. The extension uses the connected DXP server's enterprise vault, without falling back to another configured vault.
-- The latest revision comes from **`GetLastItemRevision`**, by GUID; revision labels are never sorted to decide which is latest. All/hidden revisions are requested. Deleted items are excluded.
-- Every item history, current state, permission flag and direct transition is reread before a write. The native adapter checks again after the journal flush. Missing, ambiguous or inconsistent data stops the operation.
-- Only one **`AddLifeCycleStateChanges`** event is submitted at a time. No item deletion, release, payload update, lifecycle-definition edit, role escalation or direct database access is implemented. The server can reject a request under its configured permissions and lifecycle rules.
-- Referencing parent revisions reported by the native revision-link API are checked. Unknown, inaccessible, foreign-workspace or non-Obsolete unselected parents block the operation.
-- After each accepted event, the target state is reread and the states of all other revisions in the before-snapshot, including the latest, are checked for changes. Failure stops the remaining batch.
-
-The public SDK does not expose an atomic “transition only if still non-latest” compare-and-swap in the interface used here. Rechecks reduce the concurrency window but cannot prove safety against a simultaneous external revision deletion, restore, dependency change or lifecycle edit between the final read and server write. Coordinate those operations during execution. A batch is not a transaction and has no automatic rollback. Visibility and dependency coverage are limited to the current user's native API access. Existing projects that use old revisions keep their revision links, but can report those revisions as non-applicable after obsolescence.
-
-See [safety design and limitations](docs/SAFETY.md), [validation checklist](docs/VALIDATION.md), and Altium's [revision lifecycle documentation](https://www.altium.com/documentation/altium-designer/connected-workspace/items/managing-revision-lifecycle).
-
 ## Development
 
 ```powershell
 .\scripts\test.ps1      # safety engine, no Altium login or SDK needed
+.\scripts\test-ui.ps1   # English interface, isolated sample data
+.\tests\InstallerTests.ps1 # isolated compiled-installer and packaging tests
 .\scripts\build.ps1     # full native extension, licensed local SDK required
-.\scripts\install.ps1   # stage runtime + display metadata after native EPD registration, Designer closed
-.\scripts\package.ps1   # tested source ZIP + SHA-256, SDK files excluded
+.\scripts\package.ps1 -SkipBuild # compiled Windows ZIP + source ZIP + SHA-256 files
 ```
 
-GitHub Actions runs the safety, folder-inventory and English-interface tests on Windows. It does not compile the licensed native adapter or exercise a connected workspace. `src/AltiumGateway.cs` owns all SDK access; `src/RetirementEngine.cs` owns eligibility, dependency order and latest-revision guards. `src/RetirementForm.cs` owns selection and the confirmation dialog.
+GitHub Actions runs the safety, folder-inventory, English-interface and installer tests on Windows. It does not compile the licensed native adapter or exercise a connected workspace. `src/AltiumGateway.cs` owns all SDK access; `src/RetirementEngine.cs` owns eligibility, dependency order and latest-revision guards. `src/RetirementForm.cs` owns selection and the confirmation dialog.
