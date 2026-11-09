@@ -2,7 +2,7 @@
 
 This package contains the compiled extension. Installation does not run a compiler, MSBuild, a source project or an EPD file.
 
-Version 0.1.6 is a preview prepared for native acceptance testing. Preparing or downloading the package does not install it. Version 0.1.5 remains the latest non-preview release.
+Version 0.1.6 is the latest release. The package has been installed locally and its nine payload files verified. Native acceptance of the new workflow remains pending. Preparing or downloading the package does not install it.
 
 The runtime bundle is intended for authorized internal Fluidra use and is hosted in a private GitHub release repository. Download access follows that repository's permissions.
 

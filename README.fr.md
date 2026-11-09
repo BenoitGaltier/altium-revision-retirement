@@ -2,11 +2,11 @@
 
 Extension C# **autonome**, chargée directement dans Altium Designer, pour passer les anciennes révisions de **composants, symboles et footprints** à l'état **Obsolete** dans le workspace actif. Elle ne dépend d'aucun bridge, serveur local ou application compagnon.
 
-**Version 0.1.6 de prévalidation** : fenêtre non modale, recherche directe par Revision ID, filtre par dossiers et conservation des résultats après traitement. L'archive Windows contient l'extension compilée et ses deux DLL Altium. Aucun Altium Developer, SDK, compilateur, IDE ou projet EPD n'est requis sur le poste utilisateur. Cette préversion est préparée pour revue ; son installation sur le PC de l'utilisateur attend son accord. La version 0.1.5 reste la dernière release stable. La compilation SDK et les tests isolés sont vérifiés ; la validation native du nouveau workflow reste à effectuer.
+**Dernière release : [version 0.1.6](https://github.com/BenoitGaltier/altium-revision-retirement/releases/latest)** : fenêtre non modale, recherche directe par Revision ID, filtre par dossiers et conservation des résultats après traitement. L'archive Windows contient l'extension compilée et ses deux DLL Altium. Aucun Altium Developer, SDK, compilateur, IDE ou projet EPD n'est requis sur le poste utilisateur. Cette version a été installée sur le poste local et les neuf fichiers installés vérifiés. La compilation SDK et les tests isolés sont vérifiés ; la validation native du nouveau workflow reste à effectuer.
 
 ## Installation
 
-Après accord pour installer la préversion, télécharger **`altium-revision-retirement-0.1.6-windows-x64.zip`** dans les assets de sa [release privée Fluidra](https://github.com/BenoitGaltier/altium-revision-retirement-fluidra-releases/releases), extraire l'archive, fermer Altium puis lancer dans son dossier :
+Télécharger **`altium-revision-retirement-0.1.6-windows-x64.zip`** dans les assets de la [dernière release privée Fluidra](https://github.com/BenoitGaltier/altium-revision-retirement-fluidra-releases/releases/latest), extraire l'archive, fermer Altium puis lancer dans son dossier :
 
 ```powershell
 .\Install.ps1

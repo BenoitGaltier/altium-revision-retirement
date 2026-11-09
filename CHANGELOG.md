@@ -1,13 +1,14 @@
 # Changelog
 
-## 0.1.6 — 9 November 2026 (preview)
+## 0.1.6 — 9 November 2026
 
 - Open one modeless management window. Running the command again activates the existing window and retains its results.
 - Find an item by its exact Revision ID through the native SDK and read all its superseded, non-Obsolete revisions. A populated ID takes precedence over a scan; missing IDs never trigger a fallback scan.
 - Add a checked Components folder tree. Folder selections include descendants and constrain both scanning and Revision ID lookup; names are displayed with their full hierarchy.
 - Keep the result list and unattempted selections after confirmation cancellation, successful batches, interruptions and errors. Verified Obsolete rows remain visible, unchecked and disabled; uncertain attempts remain visible and blocked.
 - Add Refresh list to reread only the displayed items, without rediscovering the entire workspace inventory. Every later batch still performs full eligibility and latest-revision checks.
-- Extend isolated safety and UI coverage and update the English guide. Prepare a compiled preview with bundled runtime DLLs; do not deploy this version to the user's Designer installation before approval. Native acceptance of the new lookup and modeless workflow remains pending.
+- Extend isolated safety and UI coverage and update the English guide. Package the compiled extension with bundled runtime DLLs; install it locally after approval and verify all nine payload files. Native acceptance of the new lookup and modeless workflow remains pending.
+- Mark 0.1.6 as the latest release in both the public source repository and the private Fluidra package repository.
 
 ## 0.1.5 — 6 November 2026
 

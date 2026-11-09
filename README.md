@@ -2,11 +2,11 @@
 
 Standalone C# extension loaded directly into Altium Designer. It finds superseded **component, schematic symbol and PCB footprint revisions** in the active workspace, lets you select them individually or together, and requests their existing lifecycle transition to **Obsolete**.
 
-**Version 0.1.6 preview.** Adds a modeless window, direct Revision ID lookup, folder filters and retained results. The compiled Windows package includes the two Altium runtime DLLs and is distributed through the [private Fluidra release repository](https://github.com/BenoitGaltier/altium-revision-retirement-fluidra-releases/releases). Target PCs need Altium Designer and .NET Framework 4.8; Altium Developer, an SDK, compiler, IDE and EPD project are not required. The new workflow has isolated test coverage and a native SDK build; deployment and native acceptance of this preview are pending. The earlier read-only scanning workflow was verified with Designer 26.11.1.28 / C# SDK 4.0 / .NET Framework 4.8.
+**Latest release: [0.1.6](https://github.com/BenoitGaltier/altium-revision-retirement/releases/latest).** Adds a modeless window, direct Revision ID lookup, folder filters and retained results. The compiled Windows package includes the two Altium runtime DLLs and is distributed through the [private Fluidra release repository](https://github.com/BenoitGaltier/altium-revision-retirement-fluidra-releases/releases/latest). Target PCs need Altium Designer and .NET Framework 4.8; Altium Developer, an SDK, compiler, IDE and EPD project are not required. The package has been installed locally and all nine payload files verified; native acceptance of the new workflow remains pending. The earlier read-only scanning workflow was verified with Designer 26.11.1.28 / C# SDK 4.0 / .NET Framework 4.8.
 
 ## Install the compiled release
 
-Authorized Fluidra users can download **`altium-revision-retirement-0.1.6-windows-x64.zip`** from its private preview release assets, extract it, close Altium Designer, and run this command in the extracted folder. Version 0.1.5 remains the latest non-preview release:
+Authorized Fluidra users can download **[altium-revision-retirement-0.1.6-windows-x64.zip](https://github.com/BenoitGaltier/altium-revision-retirement-fluidra-releases/releases/download/v0.1.6/altium-revision-retirement-0.1.6-windows-x64.zip)**, extract it, close Altium Designer, and run this command in the extracted folder:
 
 ```powershell
 .\Install.ps1
