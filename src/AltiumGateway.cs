@@ -72,7 +72,7 @@ namespace AltiumRevisionRetirement
         { return new WorkspaceFolder {Guid=folder.GetGUID(),ParentGuid=folder.GetParentFolderGUID(),Name=folder.GetHRID(),SharedName=folder.GetSharedName()}; }
         static IEnumerable<IULB_Folder> SubFolders(IULB_Folder folder)
         { for(int i=0;i<folder.GetSubFolderCount();i++) yield return folder.GetSubFolder(i); }
-        public IList<Item> ReadAll(Action<string> progress)
+        public IList<WorkspaceFolder> ReadFolders(Action<string> progress)
         {
             var v=Vault(); var identity=ActiveWorkspace().Key;
             v.InvalidateCache();
@@ -84,7 +84,14 @@ namespace AltiumRevisionRetirement
                 var nested=v.GetFolders(root,"",true,ReadFlags(),null,null); Check(nested);
                 return ComponentFolderTree.Flatten(List<IULB_Folder>(nested.GetFolders()),Folder,SubFolders);
             },progress);
-            var folderIds=tree.Select(f=>f.Guid).ToList();
+            if(ActiveWorkspace().Key!=identity) throw new InvalidOperationException("The active workspace changed during folder discovery.");
+            return tree;
+        }
+        public IList<Item> ReadAll(IList<string> selectedFolders,Action<string> progress)
+        {
+            var v=Vault();var identity=ActiveWorkspace().Key;
+            var tree=ReadFolders(progress);
+            var folderIds=selectedFolders==null ? tree.Select(f=>f.Guid).ToList() : ComponentFolderTree.SelectSubtrees(tree,selectedFolders);
             var names=tree.ToDictionary(f=>Id.Of(f.Guid),f=>f.Name);
             var active=new Dictionary<string,bool>();
             var inventoryIds=FolderInventory.Read(folderIds,Types,
@@ -117,10 +124,27 @@ namespace AltiumRevisionRetirement
             foreach(var id in itemIds)
             {
                 if(ActiveWorkspace().Key!=identity) throw new InvalidOperationException("The active workspace changed during the scan.");
-                items.Add(ReadItem(id)); progress("Reading revisions: "+items.Count+"/"+itemIds.Count);
+                var item=ReadItem(id);
+                if(!folderIds.Any(f=>Id.Same(f,item.FolderGuid))) throw new InvalidOperationException("An item moved outside the selected folders during the scan. Search again.");
+                items.Add(item); progress("Reading revisions: "+items.Count+"/"+itemIds.Count);
             }
             progress("Inventory complete: "+folderIds.Count+" folders; "+items.Count+" active items; "+items.Sum(i=>i.Revisions.Count)+" revisions; "+(inventoryIds.Count-itemIds.Count)+" deleted items excluded.");
             return items;
+        }
+        public Item FindItemByRevisionId(string revisionId)
+        {
+            revisionId=(revisionId??"").Trim();
+            if(revisionId.Length==0) throw new InvalidOperationException("Enter an exact Revision ID.");
+            var identity=ActiveWorkspace().Key;var v=Vault();v.InvalidateCache();
+            var rows=v.GetItemRevisionsByHRID(revisionId,ReadFlags(),null,null);Check(rows);
+            var matches=List<IULB_ItemRevision>(rows.GetItemRevisions()).Where(r=>string.Equals(r.GetHRID(),revisionId,StringComparison.OrdinalIgnoreCase)).ToList();
+            if(ActiveWorkspace().Key!=identity) throw new InvalidOperationException("The active workspace changed during Revision ID lookup.");
+            if(matches.Count==0) return null;
+            if(matches.Select(r=>Id.Of(r.GetGUID())).Distinct().Count()!=1 || matches.Select(r=>Id.Of(r.GetItemGUID())).Distinct().Count()!=1)
+                throw new InvalidOperationException("The Revision ID is ambiguous in the active workspace.");
+            var item=ReadItem(matches[0].GetItemGUID());
+            if(ActiveWorkspace().Key!=identity) throw new InvalidOperationException("The active workspace changed during Revision ID lookup.");
+            return item;
         }
         public Item ReadItem(string itemGuid)
         {
@@ -139,7 +163,7 @@ namespace AltiumRevisionRetirement
             var latest=v.GetLastItemRevision(itemGuid);
             if(latest==null || !Id.Same(latest.GetItemGUID(),itemGuid)) throw new InvalidOperationException("The latest revision could not be determined.");
             var item=new Item { Guid=Id.Of(native.GetGUID()), Hrid=native.GetHRID(), Name=native.GetDescription(),
-                DefinitionGuid=Id.Of(native.GetLifeCycleDefinitionGUID()), LatestGuid=Id.Of(latest.GetGUID()), Kind=Kind(native.GetContentTypeGUID()) };
+                DefinitionGuid=Id.Of(native.GetLifeCycleDefinitionGUID()), LatestGuid=Id.Of(latest.GetGUID()), Kind=Kind(native.GetContentTypeGUID()), FolderGuid=Id.Of(native.GetFolderGUID()) };
             var definitions=v.GetLifeCycleDefinitionsByGUID(Id.Native(item.DefinitionGuid),ReadFlags(),null,null); Check(definitions);
             var definition=definitions.GetLifeCycleDefinitionByGUID(Id.Native(item.DefinitionGuid));
             if(definition==null) throw new InvalidOperationException("The lifecycle definition is inaccessible.");

@@ -10,6 +10,8 @@ The native folder count includes deleted item tombstones even when `ExcludeDelet
 
 The active workspace comes from `EDP.Utils.GetDXPServerManager().GetEnterpriseVault()`, with a connected-server check. No first-installed-vault fallback or external credential storage exists. Workspace GUID, service URL and user GUID form the captured identity.
 
+In version 0.1.6, an exact Revision ID uses `GetItemRevisionsByHRID`, verifies an unambiguous exact match, then reads that item's complete history. It never falls back to inventory scanning. Folder filtering uses GUIDs from the validated Components tree and includes selected descendants. Both query modes verify item folder membership and workspace identity; a stale selector from another workspace/user is rejected. Queries remain read-only.
+
 ## Preconditions
 
 1. All GUIDs are well formed, revisions are unique, belong to their parent item, and the native latest GUID belongs to the returned full history.
@@ -28,6 +30,8 @@ An accepted response must identify exactly one requested revision and target sta
 A refusal, timeout, missing acknowledgment, changed identity, failed audit write or failed postcondition stops the batch. There is no automatic retry and no rollback transition. A response may have been lost after a successful server commit; an `intent` without `verified` requires reviewing the native revision timeline. A manually initiated new scan/confirmation is a new user action, not automatic recovery.
 
 The cancel button is processed between native operations, never by aborting an in-flight server mutation. All SDK calls remain on Altium's UI thread. The UI disables scan, selection, apply and closing during work to prevent reentrancy; it pumps messages at progress boundaries, after which identities and snapshots are checked again.
+
+The modeless window retains rows after every batch. Only a durably audited verified transition marks a row Obsolete. Attempted but unverified rows stay blocked; unattempted rows can be submitted through a new preflight/confirmation. Refresh list rereads only displayed item GUIDs and reevaluates state and latest-revision eligibility. Keeping the list does not bypass any write guard. A cancelled confirmation creates no lifecycle request and preserves selection.
 
 ## Limits requiring operational validation
 

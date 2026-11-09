@@ -19,7 +19,7 @@ namespace CSharpPlugin
         { ((CommandLauncher)CommandLauncher).RegisterCommand("Manage",Manage); }
         static void Manage(IServerDocumentView view,ref string parameters)
         {
-            try { using(var form=new AltiumRevisionRetirement.RetirementForm()) form.ShowDialog(); }
+            try { AltiumRevisionRetirement.RetirementWindow.Show(); }
             catch(Exception ex) { MessageBox.Show(ex.Message,"Altium Revision Retirement",MessageBoxButtons.OK,MessageBoxIcon.Error); }
         }
         protected override IServerDocument NewDocumentInstance(string kind,string fileName) { return null; }

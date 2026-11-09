@@ -9,9 +9,10 @@ namespace AltiumRevisionRetirement
         readonly FileStream file;
         readonly StreamWriter writer;
         public string Path { get; private set; }
-        public AuditJournal()
+        public AuditJournal():this(null) { }
+        internal AuditJournal(string dataDirectory)
         {
-            var directory=System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"AltiumRevisionRetirement","Audit");
+            var directory=System.IO.Path.Combine(dataDirectory??System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"AltiumRevisionRetirement"),"Audit");
             Directory.CreateDirectory(directory);
             Path=System.IO.Path.Combine(directory,DateTime.UtcNow.ToString("yyyyMMdd-HHmmss")+"-"+Guid.NewGuid().ToString("N")+".csv");
             file=new FileStream(Path,FileMode.CreateNew,FileAccess.Write,FileShare.Read,4096,FileOptions.WriteThrough);

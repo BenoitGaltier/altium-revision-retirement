@@ -12,7 +12,7 @@ static class SafetyTests
     static void Test(string name,Action action) {action();passed++;Console.WriteLine("PASS "+name);}
     static Item Make(string kind)
     {
-        var item=new Item {Guid=G(),Hrid=kind+"-001",Name="Fixture",Kind=kind,DefinitionGuid=G()};
+        var item=new Item {Guid=G(),Hrid=kind+"-001",Name="Fixture",Kind=kind,DefinitionGuid=G(),FolderGuid=G()};
         var released=new State {Guid=G(),Name="Released",DefinitionGuid=item.DefinitionGuid};
         var obsolete=new State {Guid=G(),Name="Obsolete",DefinitionGuid=item.DefinitionGuid};
         item.States.Add(released);item.States.Add(obsolete);
@@ -28,14 +28,18 @@ static class SafetyTests
         public readonly List<Item> Items=new List<Item>();
         public readonly Dictionary<string,List<Parent>> Parents=new Dictionary<string,List<Parent>>();
         public readonly List<string> Writes=new List<string>();
-        public Action OnRead=null, OnWrite=null;
+        public Action OnRead=null, OnWrite=null, OnFind=null;
+        public int Scans, Lookups, ItemReads;
+        public Item LookupOverride;
         public bool ThrowOnWrite, IgnoreWrite;
         public Workspace ActiveWorkspace() {return new Workspace {Guid=Workspace.Guid,UserGuid=Workspace.UserGuid,Name=Workspace.Name,Url=Workspace.Url};}
-        public IList<Item> ReadAll(Action<string> progress) {return Items;}
-        public Item ReadItem(string id) {if(OnRead!=null) OnRead();return Copy(Items.Single(i=>i.Guid==id));}
+        public IList<WorkspaceFolder> ReadFolders(Action<string> progress) {throw new NotSupportedException();}
+        public IList<Item> ReadAll(IList<string> folders,Action<string> progress) {Scans++;return folders==null ? Items : Items.Where(i=>folders.Any(f=>Id.Same(f,i.FolderGuid))).ToList();}
+        public Item FindItemByRevisionId(string id) {Lookups++;if(OnFind!=null) OnFind();return LookupOverride??Items.SingleOrDefault(i=>i.Revisions.Any(r=>string.Equals(r.Hrid,id,StringComparison.OrdinalIgnoreCase)));}
+        public Item ReadItem(string id) {ItemReads++;if(OnRead!=null) OnRead();return Copy(Items.Single(i=>i.Guid==id));}
         static Item Copy(Item source)
         {
-            var i=new Item {Guid=source.Guid,Hrid=source.Hrid,Name=source.Name,Kind=source.Kind,DefinitionGuid=source.DefinitionGuid,LatestGuid=source.LatestGuid};
+            var i=new Item {Guid=source.Guid,Hrid=source.Hrid,Name=source.Name,Kind=source.Kind,DefinitionGuid=source.DefinitionGuid,LatestGuid=source.LatestGuid,FolderGuid=source.FolderGuid};
             i.States.AddRange(source.States);i.Transitions.AddRange(source.Transitions);
             i.Revisions.AddRange(source.Revisions.Select(r=>new Revision {Guid=r.Guid,ItemGuid=r.ItemGuid,Hrid=r.Hrid,StateGuid=r.StateGuid,StateName=r.StateName,Released=r.Released,CanUpdate=r.CanUpdate}));
             return i;
@@ -113,6 +117,58 @@ static class SafetyTests
             Test("latest rechecked during preflight",()=>{var f=Fixture();var c=Scan(f);f.OnRead=()=>{f.Items[0].LatestGuid=f.Items[0].Revisions[0].Guid;};Reject(()=>new RetirementEngine(f).Prepare(c));Assert(f.Writes.Count==0,"Latest guard missing");});
             Test("successful transition emits intent and verified",()=>{var f=Fixture();var p=new RetirementEngine(f).Prepare(Scan(f));var j=new Journal();Assert(Execute(f,p,j)==1,"Transition failed");Assert(j.Events.SequenceEqual(new[]{"intent","verified"}),"Audit ordering");Assert(f.Writes.Single()!=f.Items[0].LatestGuid,"Latest written");});
             Test("all three content kinds list old Draft revisions and protect latest Draft",()=>{var f=Fixture();f.Items.Add(Make("Symbol"));f.Items.Add(Make("Footprint"));foreach(var item in f.Items){item.States[0].Name="Draft";foreach(var r in item.Revisions){r.StateName="Draft";r.Released=false;}}var c=Scan(f);Assert(c.Count==3&&c.All(r=>r.Selectable)&&c.All(r=>r.RevisionHrid=="REV-9"),"Draft history was hidden or latest included");});
+            Test("Revision ID lookup takes precedence and returns the item's old history",()=>{
+                var f=Fixture();f.Items.Add(Make("Symbol"));f.Items[1].Revisions.ForEach(r=>r.Hrid="OTHER-"+r.Hrid);
+                var e=new RetirementEngine(f);var result=e.Scan(new RevisionQuery(" rev-10 ",null),m=>{});
+                Assert(result.Count==1&&result[0].RevisionHrid=="REV-9"&&f.Lookups==1&&f.Scans==0,"Search scanned or exposed latest");
+            });
+            Test("unknown Revision ID never falls back to a global scan",()=>{
+                var f=Fixture();Assert(new RetirementEngine(f).Scan(new RevisionQuery("missing",null),m=>{}).Count==0&&f.Scans==0,"Unknown ID triggered scan");
+            });
+            Test("Revision ID respects the selected folder filter",()=>{
+                var f=Fixture();var e=new RetirementEngine(f);
+                Assert(e.Scan(new RevisionQuery("REV-10",new[]{G()}),m=>{}).Count==0,"Search escaped folder filter");
+                Assert(e.Scan(new RevisionQuery("REV-10",new[]{f.Items[0].FolderGuid}),m=>{}).Count==1&&f.Scans==0,"Search ignored selected folder");
+            });
+            Test("blank Revision ID scans only the selected folders",()=>{
+                var f=Fixture();f.Items.Add(Make("Symbol"));var result=new RetirementEngine(f).Scan(new RevisionQuery("  ",new[]{f.Items[0].FolderGuid}),m=>{});
+                Assert(result.Count==1&&result[0].Kind=="Component"&&f.Scans==1&&f.Lookups==0,"Folder scan broadened");
+            });
+            Test("empty folder selection never broadens to all folders",()=>{var f=Fixture();Assert(new RetirementEngine(f).Scan(new RevisionQuery(null,new string[0]),m=>{}).Count==0,"Empty filter broadened");});
+            Test("wrong Revision ID response is rejected",()=>{var f=Fixture();f.LookupOverride=Make("Symbol");f.LookupOverride.Revisions.ForEach(r=>r.Hrid="WRONG");Reject(()=>new RetirementEngine(f).Scan(new RevisionQuery("REV-10",null),m=>{}));});
+            Test("workspace changes during direct lookup are rejected",()=>{var f=Fixture();f.OnFind=()=>f.Workspace.Guid=G();Reject(()=>new RetirementEngine(f).Scan(new RevisionQuery("REV-10",null),m=>{}));Assert(f.Writes.Count==0,"Lookup wrote data");});
+            Test("completed transitions retain rows and can be followed by another batch",()=>{
+                var f=Fixture();f.Items.Add(Make("Symbol"));var e=new RetirementEngine(f);var rows=Scan(f).Select(c=>new RevisionRow(c) {Selected=true}).ToList();
+                var first=rows[0];var journal=new Journal();
+                using(var audit=new ObservedAudit(journal,(name,c)=>rows.Single(r=>r.Candidate.RevisionGuid==c.RevisionGuid).AuditEvent(name)))
+                    Assert(e.Execute(e.Prepare(new[]{first.Candidate}),"note",audit,()=>false,m=>{})==1,"Batch failed");
+                Assert(rows.Count==2&&first.CurrentState=="Obsolete"&&!first.Selectable&&!first.Selected&&rows[1].Selected,"List or remaining selection lost");
+                Assert(e.Prepare(new[]{rows[1].Candidate}).Candidates.Count==1,"Remaining batch needs scan");
+            });
+            Test("uncertain writes stay visible and blocked without blocking unattempted rows",()=>{
+                var f=Fixture();f.Items.Add(Make("Symbol"));var e=new RetirementEngine(f);var rows=Scan(f).Select(c=>new RevisionRow(c) {Selected=true}).ToList();var plan=e.Prepare(rows.Select(r=>r.Candidate));f.ThrowOnWrite=true;
+                using(var audit=new ObservedAudit(new Journal(),(name,c)=>rows.Single(r=>r.Candidate.RevisionGuid==c.RevisionGuid).AuditEvent(name)))
+                    Reject(()=>e.Execute(plan,"note",audit,()=>false,m=>{}));
+                rows.ForEach(r=>r.FinishAttempt());
+                Assert(rows.Count==2&&rows.Count(r=>r.Selectable)==1&&rows.Count(r=>r.Selected)==1&&rows.Any(r=>r.Availability.Contains("Unverified")),"Uncertain or untouched row lost");
+            });
+            Test("audit failure cannot falsely mark a row as verified",()=>{
+                var f=Fixture();var e=new RetirementEngine(f);var row=new RevisionRow(Scan(f).Single()) {Selected=true};var plan=e.Prepare(new[]{row.Candidate});
+                using(var audit=new ObservedAudit(new Journal {FailIntent=true},(name,c)=>row.AuditEvent(name))) Reject(()=>e.Execute(plan,"note",audit,()=>false,m=>{}));
+                Assert(row.Selectable&&row.Selected&&f.Writes.Count==0,"Failed journal changed UI or workspace");
+            });
+            Test("refresh reads only listed items and retains completed and newly protected rows",()=>{
+                var f=Fixture();var extra=new Revision {Guid=G(),ItemGuid=f.Items[0].Guid,Hrid="REV-8",StateGuid=f.Items[0].Revisions[0].StateGuid,StateName="Released",CanUpdate=true};f.Items[0].Revisions.Add(extra);
+                var rows=Scan(f).Select(c=>new RevisionRow(c) {Selected=true}).ToList();var target=f.Items[0].Revisions[0];target.StateName="Obsolete";target.StateGuid=f.Items[0].States[1].Guid;
+                int scans=f.Scans;RevisionList.Refresh(f,rows,m=>{});
+                Assert(f.Scans==scans&&f.ItemReads==1&&rows.Count==2&&rows.Count(r=>r.CurrentState=="Obsolete"&&!r.Selectable)==1,"Refresh rescanned or dropped rows");
+                f.Items[0].LatestGuid=extra.Guid;RevisionList.Refresh(f,rows,m=>{});
+                Assert(rows.All(r=>!r.Selectable)&&rows.Any(r=>r.Availability.Contains("Protected latest")),"Refresh exposed new latest");
+            });
+            Test("workspace switch blocks targeted refresh before reading items",()=>{
+                var f=Fixture();var rows=Scan(f).Select(c=>new RevisionRow(c)).ToList();f.Workspace.Guid=G();Reject(()=>RevisionList.Refresh(f,rows,m=>{}));
+                Assert(f.ItemReads==0&&rows.All(r=>!r.Selectable)&&rows.Count==1,"Refresh crossed workspace or dropped list");
+            });
             FolderInventoryTests.Run(Test);
             ComponentFolderTreeTests.Run(Test);
             ItemPagesTests.Run(Test);

@@ -36,7 +36,7 @@ namespace AltiumRevisionRetirement
     }
     public sealed class Item
     {
-        public string Guid, Hrid, Name, Kind, DefinitionGuid, LatestGuid;
+        public string Guid, Hrid, Name, Kind, DefinitionGuid, LatestGuid, FolderGuid;
         public readonly List<Revision> Revisions = new List<Revision>();
         public readonly List<State> States = new List<State>();
         public readonly List<Transition> Transitions = new List<Transition>();
@@ -55,7 +55,9 @@ namespace AltiumRevisionRetirement
     public interface IGateway
     {
         Workspace ActiveWorkspace();
-        IList<Item> ReadAll(Action<string> progress);
+        IList<WorkspaceFolder> ReadFolders(Action<string> progress);
+        IList<Item> ReadAll(IList<string> folderGuids, Action<string> progress);
+        Item FindItemByRevisionId(string revisionId);
         Item ReadItem(string itemGuid);
         IList<Parent> ReadParents(string revisionGuid);
         void Transition(Candidate candidate, string note);
@@ -107,9 +109,27 @@ namespace AltiumRevisionRetirement
             return c;
         }
         public IList<Candidate> Scan(Action<string> progress)
+        { return Scan(new RevisionQuery(),progress); }
+        public IList<Candidate> Scan(RevisionQuery query, Action<string> progress)
         {
+            if(query==null) throw new ArgumentNullException("query");
             var workspace=gateway.ActiveWorkspace(); var key=workspace.Key;
-            var items=gateway.ReadAll(progress); CheckWorkspace(key);
+            IList<Item> items;
+            if(query.HasRevisionId)
+            {
+                progress("Finding Revision ID: "+query.RevisionId+" (full scan skipped)");
+                CheckWorkspace(key);
+                var item=gateway.FindItemByRevisionId(query.RevisionId);
+                CheckWorkspace(key);
+                if(item!=null && !item.Revisions.Any(r=>string.Equals(r.Hrid,query.RevisionId,StringComparison.OrdinalIgnoreCase)))
+                    throw new InvalidOperationException("Altium returned an item that does not contain the requested Revision ID.");
+                items=item!=null && query.Includes(item.FolderGuid) ? new[]{item} : new Item[0];
+                progress(item==null ? "Revision ID not found; no full scan was started." : items.Count==0 ? "The matching item is outside the selected folders." : "Reading the full history of "+item.Hrid+"; full scan skipped.");
+            }
+            else items=gateway.ReadAll(query.FolderGuids,progress);
+            CheckWorkspace(key);
+            if(items.Any(i=>!query.Includes(i.FolderGuid)))
+                throw new InvalidOperationException("Altium returned an item outside the selected folders.");
             if (items.Select(i => Id.Of(i.Guid)).Distinct().Count() != items.Count)
                 throw new InvalidOperationException("The scan returned duplicate items.");
             var result=new List<Candidate>();

@@ -14,6 +14,13 @@ static class ComponentFolderTreeTests
     static void Reject(Action action) {try {action();}catch(InvalidOperationException){return;}throw new Exception("Expected folder tree rejection");}
     public static void Run(Action<string,Action> test)
     {
+        test("folder selector expands selected branches without including siblings",()=>{
+            var root=new WorkspaceFolder {Guid=G(),Name="Components"};var a=new WorkspaceFolder {Guid=G(),Name="A",ParentGuid=root.Guid};
+            var b=new WorkspaceFolder {Guid=G(),Name="B",ParentGuid=root.Guid};var deep=new WorkspaceFolder {Guid=G(),Name="Deep",ParentGuid=a.Guid};var tree=new[]{root,a,b,deep};
+            var selected=ComponentFolderTree.SelectSubtrees(tree,new[]{a.Guid});Assert(selected.Count==2&&selected.Contains(deep.Guid)&&!selected.Contains(b.Guid));
+            Assert(ComponentFolderTree.SelectSubtrees(tree,new[]{root.Guid}).Count==4&&ComponentFolderTree.SelectSubtrees(tree,new string[0]).Count==0);
+            Reject(()=>ComponentFolderTree.SelectSubtrees(tree,new[]{G()}));
+        });
         test("SDK nested SubFolder objects are flattened at every depth",()=>{
             var root=new NativeShape {Record=new WorkspaceFolder {Guid=G(),Name="Components"}};
             var symbols=new NativeShape {Record=new WorkspaceFolder {Guid=G(),Name="Symbols",ParentGuid=root.Record.Guid}};

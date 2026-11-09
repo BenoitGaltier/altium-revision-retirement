@@ -15,6 +15,21 @@ namespace AltiumRevisionRetirement
     }
     public static class ComponentFolderTree
     {
+        public static IList<string> SelectSubtrees(IList<WorkspaceFolder> tree,IEnumerable<string> selected)
+        {
+            var byId=tree.ToDictionary(f=>Id.Of(f.Guid));
+            var ids=new HashSet<string>(selected.Select(Id.Of));
+            if(ids.Any(id=>!byId.ContainsKey(id))) throw new InvalidOperationException("A selected folder is no longer available. Reload the folder selector.");
+            bool added;
+            do
+            {
+                added=false;
+                foreach(var folder in tree)
+                    if(!string.IsNullOrWhiteSpace(folder.ParentGuid) && ids.Contains(Id.Of(folder.ParentGuid)))
+                        added=ids.Add(Id.Of(folder.Guid)) || added;
+            } while(added);
+            return ids.OrderBy(id=>id).ToList();
+        }
         public static IList<WorkspaceFolder> Flatten<T>(IEnumerable<T> roots,Func<T,WorkspaceFolder> describe,Func<T,IEnumerable<T>> children)
         {
             var pending=new Stack<T>(roots);var found=new Dictionary<string,WorkspaceFolder>();

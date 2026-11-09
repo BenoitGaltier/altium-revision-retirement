@@ -12,8 +12,12 @@ namespace AltiumRevisionRetirement
         DateTime written=DateTime.MinValue;
         string lastProgress="Scan started";
         string workspace="";
-        readonly string path=System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"AltiumRevisionRetirement","Diagnostics","last-scan.txt");
-        internal ScanDiagnostics() { Write("running","Scan started",null); }
+        readonly string path;
+        internal ScanDiagnostics(string dataDirectory=null)
+        {
+            path=System.IO.Path.Combine(dataDirectory??System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"AltiumRevisionRetirement"),"Diagnostics","last-scan.txt");
+            Write("running","Scan started",null);
+        }
         internal void Workspace(Workspace value) { workspace=value.Name;Write("running","Connected to "+workspace,null); }
         internal void Progress(string message) { lastProgress=message;if((DateTime.UtcNow-written).TotalSeconds>=1) Write("running",message,null); }
         internal void Complete(IList<Candidate> result)

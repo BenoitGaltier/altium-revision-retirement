@@ -2,11 +2,11 @@
 
 Extension C# **autonome**, chargée directement dans Altium Designer, pour passer les anciennes révisions de **composants, symboles et footprints** à l'état **Obsolete** dans le workspace actif. Elle ne dépend d'aucun bridge, serveur local ou application compagnon.
 
-**Version 0.1.5 de prévalidation** : l'archive Windows contient l'extension compilée et ses deux DLL Altium. Aucun Altium Developer, SDK, compilateur, IDE ou projet EPD n'est requis sur le poste utilisateur. Le scan natif a été vérifié avec Altium Designer Agile 26.11.1.28 / SDK C# 4.0 / .NET Framework 4.8. Les transitions natives restent à vérifier avec la [procédure de validation](docs/VALIDATION.md). Aucune transition réelle n'a été exécutée par ces contrôles.
+**Version 0.1.6 de prévalidation** : fenêtre non modale, recherche directe par Revision ID, filtre par dossiers et conservation des résultats après traitement. L'archive Windows contient l'extension compilée et ses deux DLL Altium. Aucun Altium Developer, SDK, compilateur, IDE ou projet EPD n'est requis sur le poste utilisateur. Cette préversion est préparée pour revue ; son installation sur le PC de l'utilisateur attend son accord. La version 0.1.5 reste la dernière release stable. La compilation SDK et les tests isolés sont vérifiés ; la validation native du nouveau workflow reste à effectuer.
 
 ## Installation
 
-Télécharger **`altium-revision-retirement-0.1.5-windows-x64.zip`** dans les assets de la release, extraire l'archive, fermer Altium puis lancer dans son dossier :
+Après accord pour installer la préversion, télécharger **`altium-revision-retirement-0.1.6-windows-x64.zip`** dans les assets de sa [release privée Fluidra](https://github.com/BenoitGaltier/altium-revision-retirement-fluidra-releases/releases), extraire l'archive, fermer Altium puis lancer dans son dossier :
 
 ```powershell
 .\Install.ps1
@@ -23,11 +23,11 @@ L'ensemble des contrôles, états d'avancement, erreurs et confirmations de l'ex
 ## Utilisation
 
 1. Se connecter au workspace voulu dans Altium Designer.
-2. Cliquer sur **Scan** : lecture seule des anciennes révisions dont le lifecycle n'est pas `Obsolete`. Les dernières révisions sont exclues, y compris celles masquées ou planifiées.
+2. La fenêtre reste ouverte sans bloquer Designer. Choisir éventuellement **Folders…**, puis saisir un **Revision ID** exact et cliquer sur **Search** pour lire toutes les anciennes révisions non Obsolete de cet élément. Sans identifiant, **Scan** parcourt les dossiers sélectionnés et leurs sous-dossiers. Le filtre s'applique aux deux modes ; une recherche sans résultat ne lance jamais de scan global. Les dernières révisions restent exclues, y compris celles masquées ou planifiées.
 3. Cocher les lignes une par une, ou utiliser **Select all** pour toutes celles possédant une transition directe valide. Les révisions sans droits suffisants ou sans transition directe restent visibles avec le motif de blocage.
 4. Cliquer sur **Set selected revisions to Obsolete…**. L'extension relit les données et vérifie les dépendances. Un modèle encore référencé par une révision non Obsolete est protégé : sélectionner aussi cette ancienne révision parente si elle est éligible, ou conserver le modèle. Une dernière révision parente n'est jamais ajoutée automatiquement.
 5. Vérifier le plan, saisir la note de changement obligatoire et confirmer. Les parents sélectionnés passent avant leurs modèles. L'extension ne crée aucune transition et ne contourne pas les droits.
-6. Relancer l'analyse après l'opération. **Stop** interrompt le lot entre deux opérations ; les transitions réussies restent appliquées.
+6. Continuer depuis la liste conservée. Les lignes vérifiées Obsolete sont décochées et désactivées ; les sélections non traitées restent disponibles. **Refresh list** relit uniquement les éléments affichés. Une tentative incertaine reste bloquée jusqu'au contrôle de la timeline Altium et à cette actualisation. **Stop** interrompt le lot entre deux opérations ; les transitions réussies restent appliquées.
 
 ## Protections
 
