@@ -6,6 +6,8 @@ Standalone C# extension loaded directly into Altium Designer. It finds supersede
 
 ## Install the compiled release
 
+**Startup issue under investigation:** a workstation that previously opened Explorer reports "Could not start Vault Explorer" after installing 0.1.7. Preserve the current registry and installer backups before changing the installation. See [local diagnostics and isolation steps](docs/DIAGNOSTICS.md). The cause is not yet established.
+
 Download **[altium-revision-retirement-0.1.7-windows-x64.zip](https://github.com/BenoitGaltier/altium-revision-retirement/releases/download/v0.1.7/altium-revision-retirement-0.1.7-windows-x64.zip)**, extract it, close Altium Designer, and run this command in the extracted folder. No GitHub account or repository invitation is needed to download the package:
 
 ```powershell
