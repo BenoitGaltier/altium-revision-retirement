@@ -8,7 +8,7 @@ The extension runs directly inside Altium Designer. It uses the active Altium 36
 
 Requirements: Windows x64, .NET Framework 4.8 and a licensed Altium Designer installation. The two Altium runtime DLLs are included in the compiled package. Altium Developer, an SDK, compiler, IDE and SDK ticket are not needed on the target PC.
 
-1. Download **`altium-revision-retirement-0.1.6-windows-x64.zip`** from the [latest private GitHub release](https://github.com/BenoitGaltier/altium-revision-retirement-fluidra-releases/releases/latest) and extract the complete ZIP. Choose the compiled Windows asset; the automatic Source code archives are for development. Version 0.1.6 is the latest release; native acceptance of its new workflow remains pending.
+1. Download **`altium-revision-retirement-0.1.6-windows-x64.zip`** from [this repository's latest GitHub release](https://github.com/BenoitGaltier/altium-revision-retirement/releases/latest) and extract the complete ZIP. No GitHub account or repository invitation is required to download it. Choose the compiled Windows asset; the automatic Source code archives are for development. Version 0.1.6 is the latest release; native acceptance of its new workflow remains pending.
 2. Close Altium Designer normally and handle your own unsaved documents.
 3. In 64-bit PowerShell, from the extracted package folder, run:
 

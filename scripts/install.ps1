@@ -4,7 +4,7 @@ $ErrorActionPreference='Stop'
 $package=Split-Path -Parent $PSScriptRoot
 $manifestPath=Join-Path $package 'manifest.json'
 if(-not (Test-Path -LiteralPath $manifestPath)) {
-    throw 'This is a source download, not the compiled installer. Download altium-revision-retirement-<version>-windows-x64.zip from GitHub Releases, extract it, and run .\Install.ps1. Do not run build.ps1 or package.ps1 on the target PC. Releases: https://github.com/BenoitGaltier/altium-revision-retirement-fluidra-releases/releases/latest'
+    throw 'This is a source download, not the compiled installer. Download altium-revision-retirement-<version>-windows-x64.zip from GitHub Releases, extract it, and run .\Install.ps1. Do not run build.ps1 or package.ps1 on the target PC. Releases: https://github.com/BenoitGaltier/altium-revision-retirement/releases/latest'
 }
 if(-not [Environment]::Is64BitProcess) {throw 'Use 64-bit Windows PowerShell to install this x64 Altium extension.'}
 $framework=Get-ItemProperty -LiteralPath 'HKLM:\SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full' -Name Release -ErrorAction SilentlyContinue

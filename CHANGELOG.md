@@ -9,6 +9,7 @@
 - Add Refresh list to reread only the displayed items, without rediscovering the entire workspace inventory. Every later batch still performs full eligibility and latest-revision checks.
 - Extend isolated safety and UI coverage and update the English guide. Package the compiled extension with bundled runtime DLLs; install it locally after approval and verify all nine payload files. Native acceptance of the new lookup and modeless workflow remains pending.
 - Mark 0.1.6 as the latest release in both the public source repository and the private Fluidra package repository.
+- Attach the complete compiled installer and SHA-256 file directly to the original repository's 0.1.6 release for download without a GitHub account. Update download links and package documentation; keep the compiled extension DLL unchanged.
 
 ## 0.1.5 — 6 November 2026
 

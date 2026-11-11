@@ -4,7 +4,7 @@ This package contains the compiled extension. Installation does not run a compil
 
 Version 0.1.6 is the latest release. The package has been installed locally and its nine payload files verified. Native acceptance of the new workflow remains pending. Preparing or downloading the package does not install it.
 
-The runtime bundle is intended for authorized internal Fluidra use and is hosted in a private GitHub release repository. Download access follows that repository's permissions.
+The runtime bundle is attached directly to the public release in the original repository. No GitHub account or repository invitation is required to download it. Use of the bundled Altium libraries remains governed by the applicable Altium agreement.
 
 ## Requirements
 
@@ -16,7 +16,7 @@ The installer verifies every bundled file against `manifest.json` and copies the
 
 ## Install
 
-1. Download **`altium-revision-retirement-0.1.6-windows-x64.zip`** from its [private GitHub release](https://github.com/BenoitGaltier/altium-revision-retirement-fluidra-releases/releases). Choose this asset for installation. GitHub's automatic **Source code** archives are for development.
+1. Download **`altium-revision-retirement-0.1.6-windows-x64.zip`** from [this repository's release](https://github.com/BenoitGaltier/altium-revision-retirement/releases/tag/v0.1.6). Choose this asset for installation. GitHub's automatic **Source code** archives are for development.
 2. Extract the complete ZIP. Close Altium Designer normally and handle your own unsaved documents.
 3. Open a 64-bit PowerShell window in the extracted folder and run:
 

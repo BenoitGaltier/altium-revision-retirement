@@ -6,7 +6,7 @@ Extension C# **autonome**, chargée directement dans Altium Designer, pour passe
 
 ## Installation
 
-Télécharger **`altium-revision-retirement-0.1.6-windows-x64.zip`** dans les assets de la [dernière release privée Fluidra](https://github.com/BenoitGaltier/altium-revision-retirement-fluidra-releases/releases/latest), extraire l'archive, fermer Altium puis lancer dans son dossier :
+Télécharger **`altium-revision-retirement-0.1.6-windows-x64.zip`** dans les assets de la [dernière release de ce dépôt](https://github.com/BenoitGaltier/altium-revision-retirement/releases/latest), extraire l'archive, fermer Altium puis lancer dans son dossier. Le téléchargement est accessible sans compte GitHub ni invitation :
 
 ```powershell
 .\Install.ps1
