@@ -25,6 +25,7 @@ $payload=Join-Path $stage 'payload'
 [IO.Directory]::CreateDirectory((Join-Path $stage 'scripts')) | Out-Null
 Copy-Item -LiteralPath (Join-Path $project 'Install.ps1') -Destination $stage
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'install.ps1') -Destination (Join-Path $stage 'scripts\install.ps1')
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'registry-xml.ps1') -Destination (Join-Path $stage 'scripts\registry-xml.ps1')
 Copy-Item -LiteralPath (Join-Path $project 'docs\INSTALLATION.md') -Destination (Join-Path $stage 'README.md')
 $sources=@{
     'AltiumRevisionRetirement.dll'=$dll

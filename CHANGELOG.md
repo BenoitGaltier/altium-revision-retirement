@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.7 — 11 November 2026
+
+- Fix installation failures reporting "Another extension registration would change" when existing registrations contain XML carriage-return, line-feed or tab character references. Preserve these values during serialization instead of bypassing the preservation check.
+- Read the registry using its XML declaration/BOM rather than the PowerShell text encoding. Preserve accented metadata, significant whitespace, comments, namespaces and mixed content; retain the declared output encoding.
+- Compare every unrelated registry node and attribute with case-sensitive equality. Bind the concurrency check to the original registry read and retain rollback and atomic replacement.
+- Include the XML helper in the compiled package and report an incomplete download before any target writes. Suggest administrator privileges only for actual permission failures.
+- Add regression tests reproducing the 0.1.6 failure, Unicode/encoding cases, real unrelated changes and concurrent registry edits. Publish the complete installer and bundled DLLs in the original repository.
+
 ## 0.1.6 — 9 November 2026
 
 - Open one modeless management window. Running the command again activates the existing window and retains its results.

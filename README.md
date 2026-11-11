@@ -2,11 +2,11 @@
 
 Standalone C# extension loaded directly into Altium Designer. It finds superseded **component, schematic symbol and PCB footprint revisions** in the active workspace, lets you select them individually or together, and requests their existing lifecycle transition to **Obsolete**.
 
-**Latest release: [0.1.6](https://github.com/BenoitGaltier/altium-revision-retirement/releases/latest).** Adds a modeless window, direct Revision ID lookup, folder filters and retained results. The compiled Windows package includes the two Altium runtime DLLs and is attached directly to this repository's release. Target PCs need Altium Designer and .NET Framework 4.8; Altium Developer, an SDK, compiler, IDE and EPD project are not required. The package has been installed locally and all nine payload files verified; native acceptance of the new workflow remains pending. The earlier read-only scanning workflow was verified with Designer 26.11.1.28 / C# SDK 4.0 / .NET Framework 4.8.
+**Latest release: [0.1.7](https://github.com/BenoitGaltier/altium-revision-retirement/releases/latest).** Fixes installer XML preservation for existing extensions with special line breaks or accented metadata. The modeless window, direct Revision ID lookup, folder filters and retained results are unchanged. The compiled Windows package includes the two Altium runtime DLLs and is attached directly to this repository's release. Target PCs need Altium Designer and .NET Framework 4.8; Altium Developer, an SDK, compiler, IDE and EPD project are not required. Installer tests use isolated registries; validation on the affected colleague's workstation remains pending. The earlier read-only scanning workflow was verified with Designer 26.11.1.28 / C# SDK 4.0 / .NET Framework 4.8.
 
 ## Install the compiled release
 
-Download **[altium-revision-retirement-0.1.6-windows-x64.zip](https://github.com/BenoitGaltier/altium-revision-retirement/releases/download/v0.1.6/altium-revision-retirement-0.1.6-windows-x64.zip)**, extract it, close Altium Designer, and run this command in the extracted folder. No GitHub account or repository invitation is needed to download the package:
+Download **[altium-revision-retirement-0.1.7-windows-x64.zip](https://github.com/BenoitGaltier/altium-revision-retirement/releases/download/v0.1.7/altium-revision-retirement-0.1.7-windows-x64.zip)**, extract it, close Altium Designer, and run this command in the extracted folder. No GitHub account or repository invitation is needed to download the package:
 
 ```powershell
 .\Install.ps1

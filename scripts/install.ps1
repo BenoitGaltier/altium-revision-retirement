@@ -6,6 +6,9 @@ $manifestPath=Join-Path $package 'manifest.json'
 if(-not (Test-Path -LiteralPath $manifestPath)) {
     throw 'This is a source download, not the compiled installer. Download altium-revision-retirement-<version>-windows-x64.zip from GitHub Releases, extract it, and run .\Install.ps1. Do not run build.ps1 or package.ps1 on the target PC. Releases: https://github.com/BenoitGaltier/altium-revision-retirement/releases/latest'
 }
+$xmlHelper=Join-Path $PSScriptRoot 'registry-xml.ps1'
+if(-not (Test-Path -LiteralPath $xmlHelper)) {throw 'Incomplete installer package: scripts/registry-xml.ps1 is missing. Download and extract the complete Windows ZIP.'}
+. $xmlHelper
 if(-not [Environment]::Is64BitProcess) {throw 'Use 64-bit Windows PowerShell to install this x64 Altium extension.'}
 $framework=Get-ItemProperty -LiteralPath 'HKLM:\SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full' -Name Release -ErrorAction SilentlyContinue
 if(-not $framework -or [int]$framework.Release -lt 528040) {throw '.NET Framework 4.8 or later is required. Install the Windows .NET Framework 4.8 runtime, then rerun Install.ps1. No developer pack or compiler is needed.'}
@@ -46,7 +49,9 @@ foreach($dependency in $dependencies) {
     if($dependency.sha256 -notmatch '^[a-fA-F0-9]{64}$' -or (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash -ne $dependency.sha256) {throw "Bundled runtime library metadata mismatch: $($dependency.name). Download and extract the complete release again."}
     Write-Output ('Bundled runtime verified: '+$dependency.name+' ('+$dependency.assemblyIdentity+').')
 }
-[xml]$registry=Get-Content -LiteralPath $registryPath -Raw
+$registryHash=(Get-FileHash -LiteralPath $registryPath -Algorithm SHA256).Hash
+$registry=Read-ExtensionRegistryXml $registryPath
+if((Get-FileHash -LiteralPath $registryPath -Algorithm SHA256).Hash -ne $registryHash) {throw 'Altium extension registry changed while it was being read. No files were changed.'}
 if($registry.DocumentElement.Name -ne 'Extensions') {throw 'Unexpected Altium extension registry format.'}
 $entries=@($registry.Extensions.Item | Where-Object {$_.HRID -eq $hrid})
 if($entries.Count -gt 1) {throw 'Duplicate extension registrations found. No files were changed.'}
@@ -58,8 +63,7 @@ if(-not $BackupRoot) {$BackupRoot=Join-Path ([Environment]::GetFolderPath('Local
 $backup=Join-Path ([IO.Path]::GetFullPath($BackupRoot)) ([DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss')+'-'+[Guid]::NewGuid().ToString('N'))
 [IO.Directory]::CreateDirectory($backup) | Out-Null
 Copy-Item -LiteralPath $registryPath -Destination (Join-Path $backup 'ExtensionsRegistry.xml')
-$registryHash=(Get-FileHash -LiteralPath $registryPath -Algorithm SHA256).Hash
-$otherEntries=@($registry.Extensions.Item | Where-Object {$_.HRID -ne $hrid} | ForEach-Object {$_.OuterXml})
+$otherSnapshot=Get-OtherRegistrationSnapshot $registry $hrid
 $sources=@{};$expectedHashes=@{};$previous=@{}
 foreach($file in $files) {$sources[$file.name]=Join-Path $package ('payload\'+$file.name);$expectedHashes[$file.name]=$file.sha256}
 foreach($name in $sources.Keys) {
@@ -95,10 +99,10 @@ try {
     $entry.Version=[string]$version
     $entry.DateInstalled=[DateTime]::Now.ToOADate().ToString([Globalization.CultureInfo]::InvariantCulture)
     if((Get-FileHash -LiteralPath $registryPath -Algorithm SHA256).Hash -ne $registryHash) {throw 'Altium extension registry changed during installation. Registration was not replaced.'}
-    $registry.Save($temporary)
-    [xml]$candidate=Get-Content -LiteralPath $temporary -Raw
-    $candidateOthers=@($candidate.Extensions.Item | Where-Object {$_.HRID -ne $hrid} | ForEach-Object {$_.OuterXml})
-    if(($candidateOthers -join "`n") -ne ($otherEntries -join "`n")) {throw 'Another extension registration would change. Installation stopped.'}
+    Write-ExtensionRegistryXml $registry $temporary
+    $candidate=Read-ExtensionRegistryXml $temporary
+    Assert-OtherRegistrationsUnchanged $otherSnapshot $candidate $hrid
+    if((Get-FileHash -LiteralPath $registryPath -Algorithm SHA256).Hash -ne $registryHash) {throw 'Altium extension registry changed during installation. Registration was not replaced.'}
     [IO.File]::Replace($temporary,$registryPath,(Join-Path $backup 'ExtensionsRegistry.replaced.xml'))
     $registryCommitted=$true
     @($sources.Keys | ForEach-Object {[pscustomobject]@{File=$_;SHA256=$expectedHashes[$_]}}) | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $backup 'installed-files.json') -Encoding UTF8
@@ -111,7 +115,11 @@ try {
             elseif(Test-Path -LiteralPath $target) {Remove-Item -LiteralPath $target -Force}
         }
     }
-    throw "Installation failed: $($failure.Exception.Message) Backup: $backup. If access was denied, run PowerShell as administrator."
+    $message="Installation failed: $($failure.Exception.Message) Backup: $backup."
+    if($failure.CategoryInfo.Category -eq 'PermissionDenied' -or $failure.Exception.GetBaseException() -is [UnauthorizedAccessException]) {
+        $message+=' Access was denied; run PowerShell as administrator.'
+    }
+    throw $message
 } finally {if(Test-Path -LiteralPath $temporary) {Remove-Item -LiteralPath $temporary -Force}}
 Write-Output ('Installed and verified Altium Revision Retirement '+$version+'.')
 Write-Output ('Backup and receipt: '+$backup)

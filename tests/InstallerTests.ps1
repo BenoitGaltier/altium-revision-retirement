@@ -1,5 +1,6 @@
 $ErrorActionPreference='Stop'
 $project=Split-Path -Parent $PSScriptRoot
+. (Join-Path $project 'scripts\registry-xml.ps1')
 $sandbox=Join-Path $project ('.artifacts\it-'+[Guid]::NewGuid().ToString('N').Substring(0,8))
 $state=[pscustomobject]@{DesignerRunning=$false;Passed=0;Next=0}
 $processMock={param([string]$Name,[string]$ErrorAction) if($state.DesignerRunning) {[pscustomobject]@{ProcessName='X2'}}}.GetNewClosure()
@@ -13,6 +14,7 @@ function Fixture([string]$registration='none') {
     $state.Next++;$root=Join-Path $sandbox ('f'+$state.Next+' source with spaces')
     Put (Join-Path $root 'scripts\build.ps1') "throw 'A compiler must never be invoked during installation.'"
     Copy-Item -LiteralPath (Join-Path $project 'scripts\install.ps1') -Destination (Join-Path $root 'scripts\install.ps1')
+    Copy-Item -LiteralPath (Join-Path $project 'scripts\registry-xml.ps1') -Destination (Join-Path $root 'scripts\registry-xml.ps1')
     Copy-Item -LiteralPath (Join-Path $project 'Install.ps1') -Destination (Join-Path $root 'Install.ps1')
     $extensionRoot=Join-Path $root 'target\Extensions';$target=Join-Path $extensionRoot 'AltiumRevisionRetirement'
     $registryPath=Join-Path $extensionRoot 'ExtensionsRegistry.xml'
@@ -76,6 +78,79 @@ Test 'first installation without Altium Developer installs bundled runtimes and 
     Assert (-not (Test-Path -LiteralPath (Split-Path -Parent $f.Sdk))) 'Runtime installation must not need Altium Developer.'
     foreach($name in @('Altium.SDK.dll','Altium.SDK.Interfaces.dll')) {Assert ((Get-FileHash -LiteralPath (Join-Path $f.Target $name)).Hash -eq (Get-FileHash -LiteralPath (Join-Path $f.Root ('payload\'+$name))).Hash) 'Bundled runtime was not copied correctly.'}
     Assert (@(Get-ChildItem -LiteralPath $f.Backup -Filter 'installed-files.json' -Recurse).Count -eq 1) 'Hash receipt missing.'
+}
+Test 'XML character references in other registrations survive installation without a false rejection' {
+    $f=Fixture
+    Put $f.Registry '<Extensions><Item HRID="OtherExtension" Guid="different" Note="a&#xD;b&#xA;c&#x9;d"><Title>Keep this entry</Title><Description>First&#xD;&#xA;Second&#xD;Third</Description></Item></Extensions>'
+    [xml]$before=[IO.File]::ReadAllText($f.Registry)
+    $other=$before.Extensions.Item.OuterXml
+    Install $f | Out-Null
+    [xml]$after=[IO.File]::ReadAllText($f.Registry)
+    Assert (($after.Extensions.Item | Where-Object {$_.HRID -eq 'OtherExtension'}).OuterXml -ceq $other) 'Another registration lost XML character values.'
+}
+foreach($encodingName in @('utf-8','utf-16','iso-8859-1')) {
+    Test ('XML declaration preserves accented registrations with '+$encodingName+' encoding') {
+        $f=Fixture
+        $title='Extensi'+[char]0x00F3+'n '+[char]0x00F1
+        $xml='<?xml version="1.0" encoding="'+$encodingName+'"?><Extensions><Item HRID="OtherExtension" Guid="different"><Title>'+$title+'</Title><Description>First&#xD;Second</Description></Item></Extensions>'
+        [IO.File]::WriteAllText($f.Registry,$xml,[Text.Encoding]::GetEncoding($encodingName))
+        if($encodingName -eq 'utf-8') {[IO.File]::WriteAllText($f.Registry,$xml,[Text.UTF8Encoding]::new($false))}
+        $before=Read-ExtensionRegistryXml $f.Registry
+        $snapshot=Get-OtherRegistrationSnapshot $before 'AltiumRevisionRetirement'
+        Install $f | Out-Null
+        $after=Read-ExtensionRegistryXml $f.Registry
+        Assert-OtherRegistrationsUnchanged $snapshot $after 'AltiumRevisionRetirement'
+        Assert (($after.Extensions.Item | Where-Object {$_.HRID -eq 'OtherExtension'}).Title -ceq $title) 'Accented metadata was corrupted.'
+    }
+}
+Test 'mixed content, CDATA, namespaces and significant whitespace survive installation' {
+    $f=Fixture
+    Put $f.Registry "<Extensions xmlns:v='urn:vendor' note='keep'>`r`n  <!--retain--><Item HRID='OtherExtension' Guid='different' xml:space='preserve'>`r`n<Description>First <v:Value v:flag='a&#x9;b'><![CDATA[second`r`nthird]]></v:Value> tail&#xD;</Description>`r`n  </Item>`r`n</Extensions>"
+    $before=Read-ExtensionRegistryXml $f.Registry
+    $snapshot=Get-OtherRegistrationSnapshot $before 'AltiumRevisionRetirement'
+    Install $f | Out-Null
+    $after=Read-ExtensionRegistryXml $f.Registry
+    Assert-OtherRegistrationsUnchanged $snapshot $after 'AltiumRevisionRetirement'
+}
+Test 'missing XML helper stops before any target writes' {
+    $f=Fixture;$before=(Get-FileHash -LiteralPath $f.Registry).Hash
+    Remove-Item -LiteralPath (Join-Path $f.Root 'scripts\registry-xml.ps1')
+    Reject {Install $f} 'Incomplete installer package'
+    Unchanged $f $before
+    Assert (-not (Test-Path -LiteralPath $f.Target)) 'Incomplete package deployed files.'
+}
+foreach($change in @('text-case','attribute','remove','root-attribute')) {
+    Test ('preservation guard still rejects an actual unrelated '+$change+' change') {
+        [xml]$before='<Extensions flag="keep"><Item HRID="OtherExtension" Note="keep"><Title>Sentinel</Title></Item><Item HRID="AltiumRevisionRetirement"/></Extensions>'
+        $snapshot=Get-OtherRegistrationSnapshot $before 'AltiumRevisionRetirement'
+        $candidate=$before.CloneNode($true)
+        switch($change) {
+            'text-case' {$candidate.Extensions.Item[0].Title='sentinel'}
+            'attribute' {$candidate.Extensions.Item[0].SetAttribute('Note','changed')}
+            'remove' {[void]$candidate.DocumentElement.RemoveChild($candidate.Extensions.Item[0])}
+            'root-attribute' {$candidate.DocumentElement.SetAttribute('flag','changed')}
+        }
+        Reject {Assert-OtherRegistrationsUnchanged $snapshot $candidate 'AltiumRevisionRetirement'} 'Another extension registration would change'
+    }
+}
+Test 'a concurrent registry edit is retained and deployment rolls back without overwriting it' {
+    $f=Fixture 'own'
+    $race=[pscustomobject]@{Registry=$f.Registry;Injected=$false}
+    $copyMock={param([string]$LiteralPath,[string]$Destination,[switch]$Force)
+        Microsoft.PowerShell.Management\Copy-Item -LiteralPath $LiteralPath -Destination $Destination -Force:$Force
+        if($LiteralPath -eq $race.Registry -and -not $race.Injected) {
+            $race.Injected=$true
+            $doc=New-Object System.Xml.XmlDocument
+            $doc.Load($race.Registry)
+            $doc.Extensions.Item[0].Title='Concurrent update'
+            $doc.Save($race.Registry)
+        }
+    }.GetNewClosure()
+    Set-Item -Path Function:Copy-Item -Value $copyMock
+    try {Reject {Install $f} 'registry changed during installation'} finally {Remove-Item Function:Copy-Item}
+    $after=Read-ExtensionRegistryXml $f.Registry
+    Assert ($after.Extensions.Item[0].Title -ceq 'Concurrent update') 'Concurrent registration change was overwritten.'
+    Assert ((Get-Content -LiteralPath (Join-Path $f.Target 'AltiumRevisionRetirement.dll') -Raw) -eq 'old installed DLL') 'Previous runtime was not restored.'
 }
 Test 'update replaces only managed files and backs up the previous DLL' {
     $f=Fixture 'own';Put (Join-Path $f.Target 'custom-user-file.txt') 'keep me'
