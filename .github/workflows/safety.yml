@@ -18,6 +18,9 @@ jobs:
       - name: Verify compiled installation and packaging with isolated fixtures
         shell: powershell
         run: .\tests\InstallerTests.ps1
+      - name: Verify exact registry byte preservation
+        shell: powershell
+        run: .\tests\RegistryPatchTests.ps1
       - name: Verify local diagnostics preserve Altium files
         shell: powershell
         run: .\tests\DiagnosticsTests.ps1

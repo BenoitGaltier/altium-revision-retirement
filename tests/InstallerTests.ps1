@@ -88,6 +88,20 @@ Test 'XML character references in other registrations survive installation witho
     [xml]$after=[IO.File]::ReadAllText($f.Registry)
     Assert (($after.Extensions.Item | Where-Object {$_.HRID -eq 'OtherExtension'}).OuterXml -ceq $other) 'Another registration lost XML character values.'
 }
+foreach($registration in @('none','own')) {
+    Test ('full installer preserves exact outside bytes for '+$registration+' registration') {
+        $f=Fixture $registration
+        $original=[IO.File]::ReadAllBytes($f.Registry)
+        Install $f | Out-Null
+        $receipt=Get-Content -LiteralPath (@(Get-ChildItem -LiteralPath $f.Backup -Filter 'registry-patch.json' -Recurse)[0].FullName) -Raw | ConvertFrom-Json
+        $after=[IO.File]::ReadAllBytes($f.Registry)
+        Assert ([Convert]::ToBase64String($original,0,$receipt.Start) -ceq [Convert]::ToBase64String($after,0,$receipt.Start)) 'Installer changed the original prefix.'
+        $length=$original.Length-$receipt.Start-$receipt.Removed
+        Assert ([Convert]::ToBase64String($original,$receipt.Start+$receipt.Removed,$length) -ceq [Convert]::ToBase64String($after,$receipt.Start+$receipt.Inserted,$length)) 'Installer changed the original suffix.'
+        if($registration -eq 'none') {Assert ($receipt.Removed -eq 0) 'First installation removed original bytes.'}
+        Assert ($receipt.OriginalSHA256 -ceq (Get-RegistryByteHash $original)) 'Receipt does not identify the original registry.'
+    }
+}
 foreach($encodingName in @('utf-8','utf-16','iso-8859-1')) {
     Test ('XML declaration preserves accented registrations with '+$encodingName+' encoding') {
         $f=Fixture
@@ -210,6 +224,14 @@ Test 'path traversal in package file names is rejected' {
 Test 'wrong package identity cannot register another extension' {
     $f=Fixture;$f.Manifest.extension.hrid='OtherExtension';SaveManifest $f
     Reject {Install $f} 'Invalid extension package identity'
+}
+Test 'a GUID collision with another HRID stops before any writes' {
+    $f=Fixture
+    Put $f.Registry '<Extensions><Item HRID="OtherExtension" Guid="{f19cf220-6b04-4d43-a356-eebe90b392e6}" /></Extensions>'
+    $before=(Get-FileHash -LiteralPath $f.Registry).Hash
+    Reject {Install $f -CheckOnly} 'GUID is registered to another HRID'
+    Unchanged $f $before
+    Assert (-not (Test-Path -LiteralPath $f.Backup)) 'A conflicting GUID created a backup.'
 }
 foreach($registration in @('duplicate','mismatch','guid-conflict')) {
     Test ('conflicting '+$registration+' registration blocks installation') {

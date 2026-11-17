@@ -29,6 +29,8 @@ namespace AltiumRevisionRetirement
     public sealed class Transition
     {
         public string Guid, DefinitionGuid, BeforeGuid, AfterGuid;
+        public int PermissionType = -1;
+        public PermissionList Permissions = new PermissionList();
     }
     public sealed class State
     {
@@ -36,7 +38,8 @@ namespace AltiumRevisionRetirement
     }
     public sealed class Item
     {
-        public string Guid, Hrid, Name, Kind, DefinitionGuid, LatestGuid, FolderGuid;
+        public string Guid, Hrid, Name, Kind, DefinitionGuid, LatestGuid, FolderGuid, OwnerGuid;
+        public WorkspacePermissions Permissions;
         public readonly List<Revision> Revisions = new List<Revision>();
         public readonly List<State> States = new List<State>();
         public readonly List<Transition> Transitions = new List<Transition>();
@@ -96,15 +99,18 @@ namespace AltiumRevisionRetirement
                 ItemHrid=item.Hrid, RevisionHrid=revision.Hrid, Name=item.Name, Kind=item.Kind,
                 LatestHrid=item.Revisions.Single(r => Id.Same(r.Guid,item.LatestGuid)).Hrid, BeforeGuid=Id.Of(revision.StateGuid), BeforeName=revision.StateName };
             var targets = item.States.Where(s => Obsolete(s.Name) && Id.Same(s.DefinitionGuid,item.DefinitionGuid)).ToList();
-            if (!revision.CanUpdate) c.Reason = "Insufficient write permissions";
-            else if (targets.Count != 1) c.Reason = "The Obsolete state is missing or ambiguous in this lifecycle";
+            if (targets.Count != 1) c.Reason = "The Obsolete state is missing or ambiguous in this lifecycle";
             else
             {
                 c.TargetGuid=Id.Of(targets[0].Guid);
                 var routes=item.Transitions.Where(t => Id.Same(t.DefinitionGuid,item.DefinitionGuid) &&
                     Id.Same(t.BeforeGuid,revision.StateGuid) && Id.Same(t.AfterGuid,c.TargetGuid)).ToList();
                 if (routes.Count != 1) c.Reason="The direct transition to Obsolete is missing or ambiguous";
-                else c.TransitionGuid=Id.Of(routes[0].Guid);
+                else
+                {
+                    c.TransitionGuid=Id.Of(routes[0].Guid);
+                    c.Reason=WorkspacePermissionPolicy.Reason(workspace,item,revision,routes[0]);
+                }
             }
             return c;
         }
@@ -155,6 +161,8 @@ namespace AltiumRevisionRetirement
             if (!Id.Same(item.Guid,expected.ItemGuid)) throw new InvalidOperationException("Altium returned a different item.");
             var revision=item.Revisions.SingleOrDefault(r=>Id.Same(r.Guid,expected.RevisionGuid));
             var actual=revision==null ? null: Describe(expected.Workspace,item,revision);
+            if(actual!=null && !actual.Selectable)
+                throw new InvalidOperationException(expected.RevisionHrid+": "+actual.Reason+" Refresh the list before continuing.");
             if(actual==null || !actual.Selectable || actual.BeforeGuid!=expected.BeforeGuid ||
                 actual.TargetGuid!=expected.TargetGuid || actual.TransitionGuid!=expected.TransitionGuid || actual.Kind!=expected.Kind)
                 throw new InvalidOperationException("This revision is protected or changed since the scan: "+expected.RevisionHrid+". Scan again.");

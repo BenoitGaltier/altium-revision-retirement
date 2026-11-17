@@ -21,7 +21,8 @@ namespace AltiumRevisionRetirement
         internal void Workspace(Workspace value) { workspace=value.Name;Write("running","Connected to "+workspace,null); }
         internal void Progress(string message) { lastProgress=message;if((DateTime.UtcNow-written).TotalSeconds>=1) Write("running",message,null); }
         internal void Complete(IList<Candidate> result)
-        { Write("succeeded",result.Count+" old non-Obsolete revisions; "+result.Count(c=>c.Selectable)+" eligible for selection. "+string.Join("; ",result.GroupBy(c=>c.Kind+" / "+c.BeforeName).Select(g=>g.Key+": "+g.Count())),null); }
+        { Write("succeeded",result.Count+" old non-Obsolete revisions; "+result.Count(c=>c.Selectable)+" eligible for selection. "+string.Join("; ",result.GroupBy(c=>c.Kind+" / "+c.BeforeName).Select(g=>g.Key+": "+g.Count()))+
+            ". Blocked reasons: "+string.Join("; ",result.Where(c=>!c.Selectable).GroupBy(c=>c.Reason).Select(g=>g.Key+" ("+g.Count()+")")),null); }
         internal void Failed(Exception error) { Write(error is OperationCanceledException ? "cancelled" : "failed",error.Message,error); }
         void Write(string state,string message,Exception error)
         {

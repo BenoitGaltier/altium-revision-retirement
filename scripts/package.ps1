@@ -60,7 +60,8 @@ $manifest=[ordered]@{
     }
     platform='Windows x64 / .NET Framework 4.8'
     distribution='Original repository / GitHub release asset'
-    testedDesignerBuild='26.11.1.28'
+    buildReferenceDesignerBuild='26.11.1.28'
+    nativeWorkspaceAcceptance='Pending on the target Designer build and workspace; see the English guide.'
     files=$payloadFiles;dependencies=$dependencies
 }
 $manifest | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $stage 'manifest.json') -Encoding UTF8

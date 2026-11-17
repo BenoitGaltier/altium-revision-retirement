@@ -6,7 +6,7 @@ using DXP;
 namespace AltiumRevisionRetirement
 {
     // Native SDK only. All calls run on Altium's UI thread; no HTTP server or external process.
-    public sealed class AltiumGateway: IGateway
+    public sealed partial class AltiumGateway: IGateway
     {
         static readonly string[] Types = { DXP.EDMS.ContentTypeGuid.Component, DXP.EDMS.ContentTypeGuid.Symbol, DXP.EDMS.ContentTypeGuid.PcbComponent };
         static TEDMS_VaultFlagSet ReadFlags() { return new TEDMS_VaultFlagSet(TEDMS_VaultFlag.edmsWait,TEDMS_VaultFlag.edmsForceRefresh); }
@@ -120,11 +120,13 @@ namespace AltiumRevisionRetirement
                 });
                 },progress);
             var itemIds=FolderInventory.ActiveItems(inventoryIds,active);
+            v.InvalidateCache();
+            var permissions=ReadPermissions(v);
             var items=new List<Item>();
             foreach(var id in itemIds)
             {
                 if(ActiveWorkspace().Key!=identity) throw new InvalidOperationException("The active workspace changed during the scan.");
-                var item=ReadItem(id);
+                var item=ReadItemCore(id,v,permissions);
                 if(!folderIds.Any(f=>Id.Same(f,item.FolderGuid))) throw new InvalidOperationException("An item moved outside the selected folders during the scan. Search again.");
                 items.Add(item); progress("Reading revisions: "+items.Count+"/"+itemIds.Count);
             }
@@ -148,7 +150,13 @@ namespace AltiumRevisionRetirement
         }
         public Item ReadItem(string itemGuid)
         {
-            var v=Vault(); v.InvalidateCache(); itemGuid=Id.Native(itemGuid);
+            var v=Vault();v.InvalidateCache();
+            return ReadItemCore(itemGuid,v,ReadPermissions(v));
+        }
+        Item ReadItemCore(string itemGuid,IEDMS_Vault v,PermissionRead permissions)
+        {
+            if(ActiveWorkspace().Key!=permissions.User.WorkspaceKey) throw new InvalidOperationException("The active workspace or user changed during permission checks.");
+            itemGuid=Id.Native(itemGuid);
             var rows=v.GetItemsByGUID(itemGuid,Options(),ReadFlags(),null,null); Check(rows);
             var native=rows.GetItemByGUID(itemGuid);
             if(native==null || !native.GetIsActive() || !Id.Same(native.GetGUID(),itemGuid)) throw new InvalidOperationException("The item is inaccessible or deleted.");
@@ -163,6 +171,7 @@ namespace AltiumRevisionRetirement
             var latest=v.GetLastItemRevision(itemGuid);
             if(latest==null || !Id.Same(latest.GetItemGUID(),itemGuid)) throw new InvalidOperationException("The latest revision could not be determined.");
             var item=new Item { Guid=Id.Of(native.GetGUID()), Hrid=native.GetHRID(), Name=native.GetDescription(),
+                OwnerGuid=native.GetCreatedByGUID(), Permissions=permissions.User,
                 DefinitionGuid=Id.Of(native.GetLifeCycleDefinitionGUID()), LatestGuid=Id.Of(latest.GetGUID()), Kind=Kind(native.GetContentTypeGUID()), FolderGuid=Id.Of(native.GetFolderGUID()) };
             var definitions=v.GetLifeCycleDefinitionsByGUID(Id.Native(item.DefinitionGuid),ReadFlags(),null,null); Check(definitions);
             var definition=definitions.GetLifeCycleDefinitionByGUID(Id.Native(item.DefinitionGuid));
@@ -176,7 +185,12 @@ namespace AltiumRevisionRetirement
             for(int i=0;i<definition.GetStateTransitionCount();i++)
             {
                 var t=definition.GetStateTransition(i);
-                item.Transitions.Add(new Transition { Guid=Id.Of(t.GetGUID()),DefinitionGuid=Id.Of(t.GetDefinitionGUID()),BeforeGuid=Id.Of(t.GetStateBeforeGUID()),AfterGuid=Id.Of(t.GetStateAfterGUID()) });
+                var transition=new Transition { Guid=Id.Of(t.GetGUID()),DefinitionGuid=Id.Of(t.GetDefinitionGUID()),BeforeGuid=Id.Of(t.GetStateBeforeGUID()),AfterGuid=Id.Of(t.GetStateAfterGUID()) };
+                try {transition.PermissionType=t.GetPermissionType();} catch(Exception) {transition.PermissionType=-1;}
+                if(!permissions.User.Administrator && transition.PermissionType==0 &&
+                    item.States.Any(s=>Id.Same(s.Guid,transition.AfterGuid) && RetirementEngine.Obsolete(s.Name)))
+                    transition.Permissions=ReadPermissionAcl(permissions,transition.Guid);
+                item.Transitions.Add(transition);
             }
             foreach(var r in revisions)
             {
@@ -184,8 +198,9 @@ namespace AltiumRevisionRetirement
                 var state=item.States.SingleOrDefault(s=>Id.Same(s.Guid,r.GetLifeCycleStateGUID()));
                 if(state==null) throw new InvalidOperationException("The revision state is missing from its lifecycle definition.");
                 item.Revisions.Add(new Revision { Guid=Id.Of(r.GetGUID()), ItemGuid=Id.Of(r.GetItemGUID()), Hrid=r.GetHRID(),
-                    StateGuid=Id.Of(r.GetLifeCycleStateGUID()), StateName=state.Name, Released=r.GetReleaseDate()>0, CanUpdate=r.GetCanUpdate() && v.GetCanUpdate() });
+                    StateGuid=Id.Of(r.GetLifeCycleStateGUID()), StateName=state.Name, Released=r.GetReleaseDate()>0, CanUpdate=r.GetCanUpdate() });
             }
+            if(ActiveWorkspace().Key!=permissions.User.WorkspaceKey) throw new InvalidOperationException("The active workspace or user changed during permission checks.");
             return item;
         }
         public IList<Parent> ReadParents(string revisionGuid)
@@ -215,6 +230,7 @@ namespace AltiumRevisionRetirement
             var item=ReadItem(c.ItemGuid);
             var revision=item.Revisions.SingleOrDefault(r=>Id.Same(r.Guid,c.RevisionGuid));
             var current=revision==null ? null: RetirementEngine.Describe(c.Workspace,item,revision);
+            if(current!=null && !current.Selectable) throw new InvalidOperationException(c.RevisionHrid+": "+current.Reason);
             if(current==null || !current.Selectable || current.BeforeGuid!=c.BeforeGuid ||
                 current.TransitionGuid!=c.TransitionGuid || current.TargetGuid!=c.TargetGuid || ActiveWorkspace().Key!=c.Workspace.Key)
                 throw new InvalidOperationException("The revision or workspace changed before the transition.");

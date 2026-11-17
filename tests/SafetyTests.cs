@@ -34,12 +34,12 @@ static class SafetyTests
         public bool ThrowOnWrite, IgnoreWrite;
         public Workspace ActiveWorkspace() {return new Workspace {Guid=Workspace.Guid,UserGuid=Workspace.UserGuid,Name=Workspace.Name,Url=Workspace.Url};}
         public IList<WorkspaceFolder> ReadFolders(Action<string> progress) {throw new NotSupportedException();}
-        public IList<Item> ReadAll(IList<string> folders,Action<string> progress) {Scans++;return folders==null ? Items : Items.Where(i=>folders.Any(f=>Id.Same(f,i.FolderGuid))).ToList();}
-        public Item FindItemByRevisionId(string id) {Lookups++;if(OnFind!=null) OnFind();return LookupOverride??Items.SingleOrDefault(i=>i.Revisions.Any(r=>string.Equals(r.Hrid,id,StringComparison.OrdinalIgnoreCase)));}
+        public IList<Item> ReadAll(IList<string> folders,Action<string> progress) {Scans++;foreach(var i in Items) PermissionFixtures.Bind(i,Workspace);return folders==null ? Items : Items.Where(i=>folders.Any(f=>Id.Same(f,i.FolderGuid))).ToList();}
+        public Item FindItemByRevisionId(string id) {Lookups++;if(OnFind!=null) OnFind();foreach(var i in Items) PermissionFixtures.Bind(i,Workspace);return LookupOverride??Items.SingleOrDefault(i=>i.Revisions.Any(r=>string.Equals(r.Hrid,id,StringComparison.OrdinalIgnoreCase)));}
         public Item ReadItem(string id) {ItemReads++;if(OnRead!=null) OnRead();return Copy(Items.Single(i=>i.Guid==id));}
         static Item Copy(Item source)
         {
-            var i=new Item {Guid=source.Guid,Hrid=source.Hrid,Name=source.Name,Kind=source.Kind,DefinitionGuid=source.DefinitionGuid,LatestGuid=source.LatestGuid,FolderGuid=source.FolderGuid};
+            var i=new Item {Guid=source.Guid,Hrid=source.Hrid,Name=source.Name,Kind=source.Kind,DefinitionGuid=source.DefinitionGuid,LatestGuid=source.LatestGuid,FolderGuid=source.FolderGuid,OwnerGuid=source.OwnerGuid,Permissions=source.Permissions};
             i.States.AddRange(source.States);i.Transitions.AddRange(source.Transitions);
             i.Revisions.AddRange(source.Revisions.Select(r=>new Revision {Guid=r.Guid,ItemGuid=r.ItemGuid,Hrid=r.Hrid,StateGuid=r.StateGuid,StateName=r.StateName,Released=r.Released,CanUpdate=r.CanUpdate}));
             return i;
@@ -72,6 +72,10 @@ static class SafetyTests
     {
         try
         {
+            WorkspacePermissionTests.Run(Test);
+            Test("workspace permission revoked after scan prevents a write",()=>{var f=Fixture();var c=Scan(f);f.Items[0].Permissions.GlobalOperation=PermissionFixtures.Acl();Reject(()=>new RetirementEngine(f).Prepare(c));Assert(f.Writes.Count==0,"Revoked permission wrote data");});
+            Test("transition permission revoked after preflight prevents a write",()=>{var f=Fixture();var p=new RetirementEngine(f).Prepare(Scan(f));f.Items[0].Transitions[0].Permissions=PermissionFixtures.Acl();Reject(()=>Execute(f,p,new Journal()));Assert(f.Writes.Count==0,"Revoked local permission wrote data");});
+            Test("permission revoked at final reread prevents intent and mutation",()=>{var f=Fixture();var p=new RetirementEngine(f).Prepare(Scan(f));var reads=f.ItemReads;f.OnRead=()=>{if(f.ItemReads==reads+2) f.Items[0].Permissions.GlobalOperation=PermissionFixtures.Acl();};var j=new Journal();Reject(()=>Execute(f,p,j));Assert(f.Writes.Count==0&&j.Events.Count==0,"Final permission change was ignored");});
             Test("only superseded revisions for all three types",()=>{
                 var f=Fixture();f.Items.Add(Make("Symbol"));f.Items.Add(Make("Footprint"));var c=Scan(f);
                 Assert(c.Count==3 && c.All(x=>x.RevisionHrid=="REV-9"),"Latest revision exposed");Assert(f.Writes.Count==0,"Scan wrote data");

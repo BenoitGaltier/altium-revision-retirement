@@ -36,6 +36,7 @@ static class UiSmokeTests
             Item.Transitions.Add(new Transition {Guid=G(),DefinitionGuid=Item.DefinitionGuid,BeforeGuid=Item.States[0].Guid,AfterGuid=Item.States[1].Guid});
             for(int i=1;i<=3;i++) Item.Revisions.Add(new Revision {Guid=G(),ItemGuid=Item.Guid,Hrid="CMP-001-0"+i,StateGuid=Item.States[0].Guid,StateName="Draft",CanUpdate=true});
             Item.LatestGuid=Item.Revisions[2].Guid;
+            PermissionFixtures.Bind(Item,Workspace);
         }
         public Workspace ActiveWorkspace() {return Workspace;}
         public IList<WorkspaceFolder> ReadFolders(Action<string> p) {throw new Exception("Unexpected folder discovery");}
@@ -44,7 +45,7 @@ static class UiSmokeTests
         public Item ReadItem(string id)
         {
             Reads++;Assert(id==Item.Guid,"Read a different item");
-            var copy=new Item {Guid=Item.Guid,FolderGuid=Item.FolderGuid,Hrid=Item.Hrid,Name=Item.Name,Kind=Item.Kind,DefinitionGuid=Item.DefinitionGuid,LatestGuid=Item.LatestGuid};
+            var copy=new Item {Guid=Item.Guid,FolderGuid=Item.FolderGuid,Hrid=Item.Hrid,Name=Item.Name,Kind=Item.Kind,DefinitionGuid=Item.DefinitionGuid,LatestGuid=Item.LatestGuid,OwnerGuid=Item.OwnerGuid,Permissions=Item.Permissions};
             copy.States.AddRange(Item.States);copy.Transitions.AddRange(Item.Transitions);
             copy.Revisions.AddRange(Item.Revisions.Select(r=>new Revision {Guid=r.Guid,ItemGuid=r.ItemGuid,Hrid=r.Hrid,StateGuid=r.StateGuid,StateName=r.StateName,CanUpdate=r.CanUpdate}));return copy;
         }

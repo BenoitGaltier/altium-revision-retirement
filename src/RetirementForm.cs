@@ -187,7 +187,7 @@ namespace AltiumRevisionRetirement
                 grid.Rows.Clear();
                 foreach(var c in result)
                 {
-                    int index=grid.Rows.Add(false,c.Kind,c.ItemHrid,c.RevisionHrid,c.BeforeName,c.LatestHrid,c.Name,c.Selectable ? "Direct transition available; dependencies will be checked before applying": c.Reason);
+                    int index=grid.Rows.Add(false,c.Kind,c.ItemHrid,c.RevisionHrid,c.BeforeName,c.LatestHrid,c.Name,"");
                     grid.Rows[index].Tag=new RevisionRow(c);DisplayRow(grid.Rows[index]);
                 }
                 resultScope.Text="Displayed results: "+(query.HasRevisionId ? "item history for Revision ID "+query.RevisionId : "folder scan")+" | "+folderSummary.Text;

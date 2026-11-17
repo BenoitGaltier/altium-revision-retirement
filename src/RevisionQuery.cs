@@ -42,7 +42,7 @@ namespace AltiumRevisionRetirement
         public void Refresh(Candidate candidate)
         {
             Candidate=candidate;CurrentState=candidate.BeforeName;retired=false;uncertain=false;
-            Availability=candidate.Selectable ? "Direct transition available; dependencies will be checked before applying" : candidate.Reason;
+            Availability=candidate.Selectable ? "Workspace permissions verified; dependencies will be checked before applying" : candidate.Reason;
             if(!Selectable) Selected=false;
         }
         public void Block(string state,string reason)

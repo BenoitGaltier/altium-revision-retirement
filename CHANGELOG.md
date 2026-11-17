@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.8 — 17 November 2026
+
+- Replace the generic vault write-capability check with native workspace identity, revision edit access, global operation ACL and transition ACL checks. Resolve configured users, groups, organization, Owner and Collaborator; distinguish refusal, unverified rights and approval workflows. Reread permission context before each lifecycle event.
+- Patch only the extension's owned XML Item, retaining the original registry's surrounding bytes and native structure. Never serialize the complete registry. Verify prefix/suffix hashes, retain concurrency and rollback guards, and record the exact byte span and original/result hashes.
+- Make CheckOnly validate the planned XML patch in memory. Preserve existing unknown extension fields and unrelated registrations; reject duplicate/conflicting identities.
+- Add workspace permission and rights-revocation tests, exact-byte installer tests across encodings/newlines and full-install preservation checks. Update the English documentation and prepare the compiled installer with bundled Altium runtime DLLs.
+- Native acceptance for the affected user's permissions and workstation remains pending. This release does not automatically repair an already damaged registry or establish the cause of the earlier Vault Explorer warning.
+
 ## 0.1.7 — 11 November 2026
 
 - Fix installation failures reporting "Another extension registration would change" when existing registrations contain XML carriage-return, line-feed or tab character references. Preserve these values during serialization instead of bypassing the preservation check.
