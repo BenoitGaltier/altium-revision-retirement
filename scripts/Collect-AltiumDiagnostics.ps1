@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param([string]$AltiumExtensionsPath,[string]$BackupRoot,[string]$OutputDirectory)
+param([string]$AltiumExtensionsPath,[string]$BackupRoot,[string]$OutputDirectory,[string]$RevisionRetirementDataPath)
 $ErrorActionPreference='Stop'
 . (Join-Path $PSScriptRoot 'registry-xml.ps1')
 function Read-Entry($Document,[string]$Hrid) {
@@ -20,6 +20,60 @@ function Describe-Dll([string]$Path) {
     }
     return $info
 }
+function Protect-DiagnosticText([string]$Text) {
+    $safe=[regex]::Replace($Text,'https?://[^\s"''<>]+','[URL]',[Text.RegularExpressions.RegexOptions]::IgnoreCase)
+    $safe=[regex]::Replace($safe,'\bBearer\s+[^\s"'',;]+','Bearer [redacted]',[Text.RegularExpressions.RegexOptions]::IgnoreCase)
+    return [regex]::Replace($safe,'\b(?:password|pwd|token|[a-z_]*session[a-z_]*|ticket|authorization)\b["'']?\s*[:=]\s*(?:"[^"]*"|''[^'']*''|[^\s;,}]+)','[credential redacted]',[Text.RegularExpressions.RegexOptions]::IgnoreCase)
+}
+function Read-ScanEvidence([string]$DataRoot,[string]$Output,[string]$ExtensionDll) {
+    $path=Join-Path $DataRoot 'Diagnostics\last-scan.txt'
+    $info=[ordered]@{Exists=$false;SourcePath=$path;PermissionAPIsExecutedByCollector=$false;PermissionConclusion='Not evaluated; existing evidence only'}
+    try {
+        $info.Exists=Test-Path -LiteralPath $path -PathType Leaf
+        if(-not $info.Exists) {return $info}
+        $file=Get-Item -LiteralPath $path
+        $info.LastWriteUTC=$file.LastWriteTimeUtc.ToString('o')
+        $info.Bytes=$file.Length
+        if($file.Length -gt 2MB) {$info.CollectionError='Scan log exceeds the 2 MiB evidence limit; it was not copied.';return $info}
+        $before=(Get-FileHash -LiteralPath $path).Hash
+        $text=[IO.File]::ReadAllText($path)
+        $safe=Protect-DiagnosticText $text
+        $target=Join-Path $Output 'last-scan.redacted.txt'
+        [IO.File]::WriteAllText($target,$safe,[Text.UTF8Encoding]::new($false))
+        $info.SanitizedFile='last-scan.redacted.txt'
+        $info.CredentialsOrURLsRedacted=($safe -cne $text)
+        $info.SourceSHA256Before=$before
+        $info.SourceUnchangedDuringCollection=((Get-FileHash -LiteralPath $path).Hash -eq $before)
+        $info.CapturedSHA256=(Get-FileHash -LiteralPath $target).Hash
+        $info.Fields=[ordered]@{}
+        foreach($line in ($safe -split '\r?\n')) {
+            if($line -match '^(status|started_utc|updated_utc|workspace|message|last_progress)=(.*)$') {$info.Fields[$matches[1]]=$matches[2]}
+        }
+        if(Test-Path -LiteralPath $ExtensionDll -PathType Leaf) {
+            $info.LogPredatesInstalledDll=($file.LastWriteTimeUtc -lt (Get-Item -LiteralPath $ExtensionDll).LastWriteTimeUtc)
+        }
+    } catch {$info.CollectionError=Protect-DiagnosticText $_.Exception.Message}
+    return $info
+}
+function Read-ProbeEvidence([string]$DataRoot,[string]$Output) {
+    $info=[ordered]@{Exists=$false;PermissionAPIsExecutedByCollector=$false}
+    try {
+        $directory=Join-Path $DataRoot 'Diagnostics'
+        $file=Get-ChildItem -LiteralPath $directory -Filter 'permission-probe-*.json' -File -ErrorAction SilentlyContinue | Sort-Object LastWriteTimeUtc -Descending | Select-Object -First 1
+        if(-not $file) {return $info}
+        $info.Exists=$true;$info.SourcePath=$file.FullName;$info.LastWriteUTC=$file.LastWriteTimeUtc.ToString('o')
+        if($file.Length -gt 4MB) {throw 'Probe report exceeds the evidence limit.'}
+        $before=(Get-FileHash -LiteralPath $file.FullName).Hash
+        $text=[IO.File]::ReadAllText($file.FullName);$parsed=$text | ConvertFrom-Json
+        if($parsed.Schema -ne 1 -or $parsed.Build -ne '0.1.9.9000 READ-ONLY' -or $parsed.NativeWritesEnabled -ne $false) {throw 'Unrecognized probe report identity; it was not copied.'}
+        $safe=Protect-DiagnosticText $text
+        $target=Join-Path $Output 'permission-probe.redacted.txt';[IO.File]::WriteAllText($target,$safe,[Text.UTF8Encoding]::new($false))
+        $info.Build=$parsed.Build;$info.SanitizedFile='permission-probe.redacted.txt';$info.CredentialsOrURLsRedacted=($safe -cne $text)
+        $info.SourceUnchangedDuringCollection=((Get-FileHash -LiteralPath $file.FullName).Hash -eq $before)
+        $info.CapturedSHA256=(Get-FileHash -LiteralPath $target).Hash
+    } catch {$info.CollectionError=Protect-DiagnosticText $_.Exception.Message}
+    return $info
+}
 $build=$null
 if(-not $AltiumExtensionsPath) {
     $build=Get-ChildItem 'HKLM:\SOFTWARE\Altium\Builds' | ForEach-Object {Get-ItemProperty $_.PSPath} | Where-Object {$_.Installed -eq $true} | Sort-Object {[version]$_.FullBuild} -Descending | Select-Object -First 1
@@ -33,10 +87,14 @@ if((Split-Path -Leaf $root) -ne 'Extensions') {throw 'Select the existing Altium
 $registryPath=Join-Path $root 'ExtensionsRegistry.xml'
 if(-not (Test-Path -LiteralPath $registryPath)) {throw 'Altium extension registry not found.'}
 if(-not $BackupRoot) {$BackupRoot=Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'AltiumRevisionRetirement\InstallationBackups'}
+if(-not $RevisionRetirementDataPath) {$RevisionRetirementDataPath=Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'AltiumRevisionRetirement'}
+$dataRoot=[IO.Path]::GetFullPath($RevisionRetirementDataPath).TrimEnd('\','/')
 if(-not $OutputDirectory) {$OutputDirectory=Join-Path (Get-Location).Path ('AltiumDiagnostics-'+[DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss')+'-'+[Guid]::NewGuid().ToString('N').Substring(0,6))}
 $output=[IO.Path]::GetFullPath($OutputDirectory)
 if($output.StartsWith((Split-Path -Parent $root)+'\',[StringComparison]::OrdinalIgnoreCase) -or $output -eq (Split-Path -Parent $root)) {throw 'The diagnostics output must be outside the Altium installation directory.'}
+if($output -eq $dataRoot -or $output.StartsWith($dataRoot+'\',[StringComparison]::OrdinalIgnoreCase)) {throw 'The diagnostics output must be outside the extension user-data directory.'}
 if(Test-Path -LiteralPath $output) {throw 'Choose a new output directory to avoid overwriting an earlier report.'}
+if(Test-Path -LiteralPath ($output+'.zip')) {throw 'Choose a new output directory: the diagnostic ZIP already exists.'}
 $beforeHash=(Get-FileHash -LiteralPath $registryPath).Hash
 [IO.Directory]::CreateDirectory($output) | Out-Null
 Copy-Item -LiteralPath $registryPath -Destination (Join-Path $output 'current-ExtensionsRegistry.xml')
@@ -48,18 +106,22 @@ try {
     $explorer=Read-Entry $registry 'VaultExplorer'
     $retirement=Read-Entry $registry 'AltiumRevisionRetirement'
 } catch {$parseError=$_.Exception.Message}
-$report=[ordered]@{ToolVersion='1.0';Mode='Diagnostics only; Altium files are not modified';CollectedUTC=[DateTime]::UtcNow.ToString('o');PowerShellVersion=$PSVersionTable.PSVersion.ToString();Culture=[Globalization.CultureInfo]::CurrentCulture.Name;AltiumBuild=if($build) {[string]$build.FullBuild} else {$null};ExtensionsPath=$root;BackupRoot=[IO.Path]::GetFullPath($BackupRoot);RegistrySHA256=$beforeHash;VaultExplorer=$explorer;RevisionRetirement=$retirement;DLLs=@();RunningAltium=@();Backups=@()}
+$report=[ordered]@{ToolVersion='1.1';Mode='Diagnostics only; Altium files are not modified';CollectedUTC=[DateTime]::UtcNow.ToString('o');PowerShellVersion=$PSVersionTable.PSVersion.ToString();Culture=[Globalization.CultureInfo]::CurrentCulture.Name;AltiumBuild=if($build) {[string]$build.FullBuild} else {$null};ExtensionsPath=$root;BackupRoot=[IO.Path]::GetFullPath($BackupRoot);RegistrySHA256=$beforeHash;VaultExplorer=$explorer;RevisionRetirement=$retirement;DLLs=@();RunningAltium=@();Backups=@();ScanEvidence=$null;WorkspaceContactedByCollector=$false}
 $report.RegistryReadError=$parseError
 $report.RegistryLastWriteUTC=(Get-Item -LiteralPath $registryPath).LastWriteTimeUtc.ToString('o')
 if($explorer.Registered -and $explorer.Path) {$report.DLLs+=Describe-Dll (Join-Path $explorer.Path 'VaultExplorer.dll')}
 if($retirement.Registered -and $retirement.Path) {
     foreach($name in @('AltiumRevisionRetirement.dll','Altium.SDK.dll','Altium.SDK.Interfaces.dll')) {$report.DLLs+=Describe-Dll (Join-Path $retirement.Path $name)}
 }
+$extensionDll=if($retirement.Registered -and $retirement.Path) {Join-Path $retirement.Path 'AltiumRevisionRetirement.dll'} else {Join-Path $root 'AltiumRevisionRetirement\AltiumRevisionRetirement.dll'}
+$report.ScanEvidence=Read-ScanEvidence $dataRoot $output $extensionDll
+$report.ProbeEvidence=Read-ProbeEvidence $dataRoot $output
 foreach($process in @(Get-Process -Name X2 -ErrorAction SilentlyContinue)) {
-    $info=[ordered]@{ProcessId=$process.Id;Modules=@()}
+    $info=[ordered]@{ProcessId=$process.Id;Modules=@();ManagedAssemblyVersionInMemoryVerified=$false}
     try {
         $info.ExecutablePath=$process.Path
         $info.StartedUTC=$process.StartTime.ToUniversalTime().ToString('o')
+        if(Test-Path -LiteralPath $extensionDll -PathType Leaf) {$info.ProcessStartedBeforeInstalledDllWrite=($process.StartTime.ToUniversalTime() -lt (Get-Item -LiteralPath $extensionDll).LastWriteTimeUtc)}
         $info.Modules=@($process.Modules | Where-Object {$_.ModuleName -match '^(AltiumRevisionRetirement|Altium\.SDK(?:\.Interfaces)?|VaultExplorer)\.dll$'} | ForEach-Object {[ordered]@{Name=$_.ModuleName;Path=$_.FileName}})
     } catch {$info.InspectionError=$_.Exception.Message}
     $report.RunningAltium+=$info
@@ -87,3 +149,4 @@ Compress-Archive -LiteralPath $output -DestinationPath $archive
 Write-Output ('Altium files were not modified. Diagnostic ZIP: '+$archive)
 Write-Output ('Explorer registered: '+$explorer.Registered+'; folder exists: '+$explorer.FolderExists+'; INS exists: '+$explorer.InsExists)
 Write-Output ('Revision Retirement version: '+$retirement.Version)
+Write-Output ('Scan evidence found: '+$report.ScanEvidence.Exists+'. This collector does not test workspace permissions or execute native permission APIs.')

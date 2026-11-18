@@ -224,6 +224,9 @@ namespace AltiumRevisionRetirement
         }
         public void Transition(Candidate c, string note)
         {
+#if PERMISSION_DIAGNOSTICS
+            throw new InvalidOperationException("Lifecycle transitions are disabled in this read-only diagnostic build.");
+#else
             if(ActiveWorkspace().Key!=c.Workspace.Key) throw new InvalidOperationException("The active workspace has changed.");
             var v=Vault();
             // Check again after the intent journal has been flushed to disk.
@@ -247,6 +250,7 @@ namespace AltiumRevisionRetirement
             var changes=List<IULB_LifeCycleStateChange>(result.GetLifeCycleStateChanges());
             if(changes.Count!=1 || !Id.Same(changes[0].GetItemRevisionGUID(),c.RevisionGuid) || !Id.Same(changes[0].GetStateAfterGUID(),c.TargetGuid))
                 throw new InvalidOperationException("The transition acknowledgement is missing or unexpected.");
+#endif
         }
     }
 }

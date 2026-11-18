@@ -17,6 +17,9 @@ namespace AltiumRevisionRetirement
         {
             if(result==null || !result.WaitUntilDone(60)) throw new InvalidOperationException("Altium did not return the workspace ACL.");
             var output=result.GetOutput();var records=result.GetResult();
+#if PERMISSION_DIAGNOSTICS
+            PermissionProbe.Record("acl-status",new {OutputPresent=output!=null,OutputSuccess=output==null?(bool?)null:output.GetSuccess(),ResultPresent=records!=null,ResultSuccess=records==null?(bool?)null:records.GetSuccess()});
+#endif
             if(output==null) throw new InvalidOperationException("Altium returned no ACL request status.");
             if(!output.GetSuccess()) throw new InvalidOperationException("Altium rejected the ACL request: "+output.GetMessage());
             if(records==null) throw new InvalidOperationException("Altium returned no ACL result status.");
@@ -33,6 +36,10 @@ namespace AltiumRevisionRetirement
                 // An unavailable organization is relevant only to an organization grant, not every user.
                 try {read.User.OrganizationGuid=vault.GetUserOrganizationGUID();} catch(Exception) {read.User.OrganizationGuid=null;}
                 read.User.IdentityVerified=ActiveWorkspace().Key==workspace.Key;
+#if PERMISSION_DIAGNOSTICS
+                PermissionProbe.Record("subject",new {WorkspaceGuid=workspace.Guid,WorkspaceName=workspace.Name,UserGuid=read.User.UserGuid,OrganizationGuid=read.User.OrganizationGuid,Administrator=read.User.Administrator,IdentityVerified=read.User.IdentityVerified});
+                PermissionProbe.RecordUserDetails(vault);
+#endif
                 if(!read.User.IdentityVerified || read.User.Administrator) return read;
                 // Read just the native operation's ACL. No enumeration of the administrative operation tree
                 // and no dependency on Library or transition display labels in any language.
@@ -52,17 +59,27 @@ namespace AltiumRevisionRetirement
             {
                 var result=read.Vault.GetACLEntries(Id.Native(objectGuid),ReadFlags(),null,null);Check(result);
                 var entries=List<IULB_ACLEntry>(result.GetACLEntries());
+#if PERMISSION_DIAGNOSTICS
+                PermissionProbe.Record("acl-list",new {ObjectGuid=objectGuid,Count=entries.Count});
+#endif
                 foreach(var entry in entries)
                 {
                     if(!Id.Same(entry.GetObjectGUID(),objectGuid)) throw new InvalidOperationException("The permission ACL belongs to a different object.");
                     // Operation and transition ACLs use Allowed; content edit access uses the native revision's CanUpdate.
                     var grant=new WorkspaceGrant {Scope=(int)entry.GetUserScopeMode(),PrincipalGuid=entry.GetUserScope(),Allowed=entry.GetAllowed()};
+#if PERMISSION_DIAGNOSTICS
+                    PermissionProbe.RecordAclEntry(objectGuid,entry,grant);
+#endif
                     acl.Grants.Add(grant);
                     if(grant.Scope==3) ReadGroup(read,grant.PrincipalGuid);
                 }
                 acl.Read=true;
             }
-            catch(Exception error) { acl=new PermissionList {ReadFailure="GetACLEntries: "+PermissionDiagnostics.Summarize(error)}; }
+            catch(Exception error) { acl=new PermissionList {ReadFailure="GetACLEntries: "+PermissionDiagnostics.Summarize(error)};
+#if PERMISSION_DIAGNOSTICS
+                PermissionProbe.Record("acl-read-failed",new {ObjectGuid=objectGuid,Error=acl.ReadFailure});
+#endif
+            }
             read.Acls[objectGuid]=acl;
             return acl;
         }
@@ -78,6 +95,9 @@ namespace AltiumRevisionRetirement
                 if(members!=null)
                 {
                     var username=manager.GetUserNameByGUID(Id.Native(read.User.UserGuid));
+#if PERMISSION_DIAGNOSTICS
+                    PermissionProbe.RecordGroup(groupGuid,read.User.UserGuid,username,members);
+#endif
                     bool unknown=false;decision=PermissionDecision.Denied;
                     for(int i=0;i<members.GetCount();i++)
                     {
@@ -92,7 +112,16 @@ namespace AltiumRevisionRetirement
                     if(decision!=PermissionDecision.Allowed && unknown) decision=PermissionDecision.Unknown;
                 }
             }
+#if PERMISSION_DIAGNOSTICS
+            catch(Exception error) { decision=PermissionDecision.Unknown;
+                PermissionProbe.Record("group-read-failed",new {GroupGuid=groupGuid,Error=PermissionDiagnostics.Summarize(error)});
+            }
+#else
             catch(Exception) { decision=PermissionDecision.Unknown; }
+#endif
+#if PERMISSION_DIAGNOSTICS
+            PermissionProbe.Record("group-evaluation",new {GroupGuid=groupGuid,Decision=decision.ToString()});
+#endif
             read.User.Groups[groupGuid]=decision;
         }
     }

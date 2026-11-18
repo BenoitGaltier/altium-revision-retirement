@@ -24,3 +24,6 @@ jobs:
       - name: Verify local diagnostics preserve Altium files
         shell: powershell
         run: .\tests\DiagnosticsTests.ps1
+      - name: Verify diagnostic DLL swap and exact restore in isolated files
+        shell: powershell
+        run: .\tests\ProbeSwapTests.ps1

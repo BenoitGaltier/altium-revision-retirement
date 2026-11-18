@@ -1,4 +1,8 @@
-# Vault Explorer startup diagnostics
+# Altium installation and permission evidence
+
+For unresolved lifecycle permissions, follow [the controlled investigation procedure](PERMISSION_INVESTIGATION.md). It uses one older Revision ID, the existing scan report and a comparison with native Explorer before any further authorization-code change. No new extension installation is needed. Collector version 1.1 includes a sanitized copy of the current Windows user's existing scan report and records its age and capture status. It does not contact a workspace or execute native permission APIs.
+
+## Vault Explorer startup diagnostics
 
 If Explorer worked before installing Revision Retirement and Altium now reports "Could not start Vault Explorer", collect the before/after evidence before changing the installation again.
 
