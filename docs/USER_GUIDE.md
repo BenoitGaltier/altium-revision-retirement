@@ -8,7 +8,7 @@ The extension runs directly inside Altium Designer. It uses the active Altium 36
 
 Requirements: Windows x64, .NET Framework 4.8 and a licensed Altium Designer installation. The two Altium runtime DLLs are included in the compiled package. Altium Developer, an SDK, compiler, IDE and SDK ticket are not needed on the target PC.
 
-1. Download **`altium-revision-retirement-0.1.8-windows-x64.zip`** from [this repository's latest GitHub release](https://github.com/BenoitGaltier/altium-revision-retirement/releases/latest) and extract the complete ZIP. No GitHub account or repository invitation is required to download it. Choose the compiled Windows asset; the automatic Source code archives are for development. Version 0.1.8 is the latest release; native acceptance of its new workflow remains pending.
+1. Download **`altium-revision-retirement-0.1.9-windows-x64.zip`** from [this repository's latest GitHub release](https://github.com/BenoitGaltier/altium-revision-retirement/releases/latest) and extract the complete ZIP. No GitHub account or repository invitation is required to download it. Choose the compiled Windows asset; the automatic Source code archives are for development. Version 0.1.9 is the latest release; native acceptance of its new workflow remains pending.
 2. Close Altium Designer normally and handle your own unsaved documents.
 3. In 64-bit PowerShell, from the extracted package folder, run:
 
@@ -51,6 +51,8 @@ The main window is modeless: it can stay open while you use Designer. Running th
 ![Folder selector with an excluded sibling branch, using sample data](folder-preview.png)
 
 ## Review and retire revisions
+
+Version 0.1.9 corrects the global permission lookup used by 0.1.8. If the old version displayed "cannot resolve Library / Move revision between lifecycle states", install the complete current Windows ZIP. The new lookup uses Altium's native operation identifier. A remaining native ACL request failure and an unresolved principal/group membership now produce different availability messages. The blocking reasons are recorded in `%LOCALAPPDATA%\AltiumRevisionRetirement\Diagnostics\last-scan.txt`; this file is local and is not automatically sent anywhere.
 
 1. Connect to the intended workspace in Designer. Open the extension and check the workspace name and URL.
 2. Optionally click **Folders…**, choose branches under **Components** and confirm the filter. For one item, enter an exact **Revision ID** and click **Search** (or press Enter). All its older non-Obsolete revisions are returned; the latest is protected even when its ID was used to find the item. A missing ID or an item outside the selected folders returns no rows and never starts a global scan. To inventory folders instead, clear the ID and click **Scan**. The scan discovers the complete folder tree under Components, then inventories only selected branches. Both modes include older `Draft` revisions. Reading all item histories can take several minutes. The scan's final status retains the number of folders, active items and revisions read, and deleted items excluded. Single-revision items and the latest revision of every item are excluded. Hidden latest revisions are also protected.

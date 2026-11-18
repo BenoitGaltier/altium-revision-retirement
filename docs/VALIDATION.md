@@ -2,6 +2,8 @@
 
 ## Verified during development
 
+- Version 0.1.9: 112 isolated engine/inventory tests cover direct lookup by the native lifecycle operation GUID, configured refusals, absent ACL responses, preserved request errors, unresolved memberships and sanitized/bounded diagnostics. The identifier is independently checked against the installed vendor `DXPServerSDK.dll` constant through the developer-only metadata contract test. Compilation and fixtures still do not prove effective permissions in the affected user's workspace/session.
+
 - Full Release build against local Designer Agile 26.11.1.28 / SDK 4.0 / .NET Framework 4.8, with warnings treated as errors.
 - Version 0.1.8: 104 isolated engine/inventory tests include the three workspace permission conditions, native workspace administrator policy, approval modes, missing identity/configuration/membership, cross-user/workspace snapshots and rights revoked after scan/preflight or at the final reread. These fixtures do not prove the native operation naming, ACL assignment format or permission-mode mapping on another Designer build.
 - Version 0.1.8 installer: 35 installer/packaging cases and 32 exact-byte patch cases cover first installation, updates, original prefix/suffix retention, BOM/no BOM, five encodings, three newline styles, comments, CDATA, entities, non-ASCII characters, tampering, duplicate/conflicting identities and rollback. CheckOnly prepares the patch without file writes. No live installation is changed by these tests.

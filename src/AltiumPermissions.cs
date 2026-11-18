@@ -17,41 +17,10 @@ namespace AltiumRevisionRetirement
         {
             if(result==null || !result.WaitUntilDone(60)) throw new InvalidOperationException("Altium did not return the workspace ACL.");
             var output=result.GetOutput();var records=result.GetResult();
-            if(output==null || !output.GetSuccess() || records==null || !records.GetSuccess())
-                throw new InvalidOperationException("Altium could not read the workspace ACL.");
-        }
-        static bool RootOperation(IULB_Operation operation)
-        {
-            var parent=operation.GetParentOperationGUID();Guid id;
-            return string.IsNullOrWhiteSpace(parent) || Guid.TryParse(parent,out id) && id==Guid.Empty;
-        }
-        static bool Named(IULB_Operation operation,string title)
-        {
-            return new[]{operation.GetHRID(),operation.GetSharedName(),operation.GetDescription()}
-                .Any(value=>string.Equals((value??"").Trim(),title,StringComparison.OrdinalIgnoreCase));
-        }
-        static void AddOperations(IEnumerable<IULB_Operation> source,Dictionary<string,IULB_Operation> all)
-        {
-            foreach(var operation in source)
-            {
-                var id=Id.Of(operation.GetGUID());
-                if(all.ContainsKey(id)) continue;
-                all.Add(id,operation);
-                var children=new List<IULB_Operation>();
-                for(int i=0;i<operation.GetSubOperationCount();i++) children.Add(operation.GetSubOperation(i));
-                AddOperations(children,all);
-            }
-        }
-        static bool UnderLibrary(IULB_Operation operation,Dictionary<string,IULB_Operation> all)
-        {
-            var seen=new HashSet<string>();
-            while(!RootOperation(operation))
-            {
-                string parent=Id.Of(operation.GetParentOperationGUID());
-                if(!seen.Add(parent) || !all.TryGetValue(parent,out operation)) return false;
-                if(Named(operation,"Library")) return true;
-            }
-            return false;
+            if(output==null) throw new InvalidOperationException("Altium returned no ACL request status.");
+            if(!output.GetSuccess()) throw new InvalidOperationException("Altium rejected the ACL request: "+output.GetMessage());
+            if(records==null) throw new InvalidOperationException("Altium returned no ACL result status.");
+            if(!records.GetSuccess()) throw new InvalidOperationException("Altium rejected the ACL result: "+records.GetMessage());
         }
         PermissionRead ReadPermissions(IEDMS_Vault vault)
         {
@@ -61,23 +30,15 @@ namespace AltiumRevisionRetirement
             {
                 if(!Id.Same(vault.GetVaultGUID(),workspace.Guid) || !Id.Same(vault.GetUserGUID(),workspace.UserGuid)) return read;
                 read.User.Administrator=vault.GetIsAdminUser();
-                read.User.OrganizationGuid=vault.GetUserOrganizationGUID();
+                // An unavailable organization is relevant only to an organization grant, not every user.
+                try {read.User.OrganizationGuid=vault.GetUserOrganizationGUID();} catch(Exception) {read.User.OrganizationGuid=null;}
                 read.User.IdentityVerified=ActiveWorkspace().Key==workspace.Key;
                 if(!read.User.IdentityVerified || read.User.Administrator) return read;
-                var result=vault.GetAllOperations(ReadFlags(),null,null);Check(result);
-                var all=new Dictionary<string,IULB_Operation>();
-                AddOperations(List<IULB_Operation>(result.GetOperations()),all);
-                // Some SDK builds return root operations only, as they do for folders.
-                foreach(var root in all.Values.Where(RootOperation).ToList())
-                {
-                    var nested=vault.GetOperations(Id.Native(root.GetGUID()),"",true,ReadFlags(),null,null);Check(nested);
-                    AddOperations(List<IULB_Operation>(nested.GetOperations()),all);
-                }
-                var matches=all.Values.Where(o=>Named(o,WorkspacePermissionPolicy.OperationName) && UnderLibrary(o,all)).ToList();
-                // No translated-name guessing, administrator-group-name guessing, or permissive fallback.
-                if(matches.Count==1) read.User.GlobalOperation=ReadPermissionAcl(read,matches[0].GetGUID());
+                // Read just the native operation's ACL. No enumeration of the administrative operation tree
+                // and no dependency on Library or transition display labels in any language.
+                read.User.GlobalOperation=WorkspacePermissionPolicy.ReadGlobalOperation(id=>ReadPermissionAcl(read,id));
             }
-            catch(Exception) { read.User.GlobalOperation=new PermissionList(); }
+            catch(Exception error) { read.User.GlobalOperation=new PermissionList {ReadFailure="Workspace permission context: "+PermissionDiagnostics.Summarize(error)}; }
             if(ActiveWorkspace().Key!=workspace.Key) read.User.IdentityVerified=false;
             return read;
         }
@@ -101,7 +62,7 @@ namespace AltiumRevisionRetirement
                 }
                 acl.Read=true;
             }
-            catch(Exception) { acl=new PermissionList(); }
+            catch(Exception error) { acl=new PermissionList {ReadFailure="GetACLEntries: "+PermissionDiagnostics.Summarize(error)}; }
             read.Acls[objectGuid]=acl;
             return acl;
         }

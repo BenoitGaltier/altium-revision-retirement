@@ -12,6 +12,37 @@ static class WorkspacePermissionTests
         };
         var revision=new Revision {CanUpdate=true};
         Func<Item,string> reason=item=>WorkspacePermissionPolicy.Reason(workspace,item,revision,item.Transitions[0]);
+        test("global ACL lookup uses the vendor lifecycle operation GUID directly",()=>{
+            var i=fixture();int calls=0;
+            i.Permissions.GlobalOperation=WorkspacePermissionPolicy.ReadGlobalOperation(id=>{
+                calls++;Assert(Guid.Parse(id)==new Guid("01867B2F-6542-4141-B53C-BAA144DDD628"));
+                return PermissionFixtures.Acl(PermissionFixtures.Grant(5));
+            });
+            Assert(calls==1&&reason(i)==null);
+        });
+        test("a missing native operation ACL response cannot become an allowance",()=>{
+            var i=fixture();i.Permissions.GlobalOperation=WorkspacePermissionPolicy.ReadGlobalOperation(id=>null);
+            Assert(reason(i).StartsWith("Permissions not verified")&&reason(i).Contains("GetACLEntries"));
+        });
+        test("native operation ACL errors retain their cause and remain blocked",()=>{
+            var i=fixture();i.Permissions.GlobalOperation=WorkspacePermissionPolicy.ReadGlobalOperation(id=>{throw new InvalidOperationException("ACL request rejected: read access denied");});
+            Assert(reason(i).StartsWith("Permissions not verified")&&reason(i).Contains("read access denied"));
+        });
+        test("read failure is distinct from unresolved membership after a successful ACL read",()=>{
+            var i=fixture();i.Permissions.GlobalOperation=PermissionFixtures.Acl(PermissionFixtures.Grant(3,Guid.NewGuid().ToString()));
+            Assert(reason(i).Contains("ACL was read")&&reason(i).Contains("membership"));
+        });
+        test("direct native operation lookup preserves a configured refusal",()=>{
+            var i=fixture();i.Permissions.GlobalOperation=WorkspacePermissionPolicy.ReadGlobalOperation(id=>PermissionFixtures.Acl());
+            Assert(reason(i).StartsWith("Workspace permission denied"));
+        });
+        test("operation read diagnostics redact credentials and URL query values",()=>{
+            var detail=PermissionDiagnostics.Summarize(new InvalidOperationException("ACL denied\r\nPortalSessionHandle=topsecret password='hidden password' token=private Authorization: Bearer abc123 https://workspace.invalid/service?ticket=secret"));
+            foreach(var secret in new[]{"topsecret","hidden password","private","abc123","workspace.invalid","ticket=secret"}) Assert(!detail.Contains(secret));
+            Assert(detail.Contains("ACL denied")&&!detail.Contains("\r")&&!detail.Contains("\n"));
+        });
+        test("native error diagnostics are bounded",()=>Assert(PermissionDiagnostics.Summarize(new Exception(new string('x',2000))).Length<400));
+        test("missing organization identity does not invalidate a collaborator grant",()=>{var i=fixture();i.Permissions.OrganizationGuid=null;Assert(reason(i)==null);});
         test("workspace collaborator and Anyone allow a standard user",()=>Assert(reason(fixture())==null));
         test("missing native revision edit right blocks the transition",()=>{revision.CanUpdate=false;try{Assert(reason(fixture()).Contains("no edit rights"));}finally{revision.CanUpdate=true;}});
         test("empty global operation ACL denies",()=>{var i=fixture();i.Permissions.GlobalOperation=PermissionFixtures.Acl();Assert(reason(i).Contains("Library /"));});

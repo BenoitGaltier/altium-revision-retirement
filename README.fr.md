@@ -2,11 +2,11 @@
 
 Extension C# **autonome**, chargée directement dans Altium Designer, pour passer les anciennes révisions de **composants, symboles et footprints** à l'état **Obsolete** dans le workspace actif. Elle ne dépend d'aucun bridge, serveur local ou application compagnon.
 
-**Dernière release : [version 0.1.8](https://github.com/BenoitGaltier/altium-revision-retirement/releases/latest)** : vérification des droits du workspace (révision, opération et transition) et modification limitée aux octets de l'entrée de notre extension dans le registre XML. La fenêtre non modale, la recherche par Revision ID, le filtre par dossiers et la conservation des résultats restent disponibles. L'archive Windows contient l'extension compilée et ses deux DLL Altium. Aucun Altium Developer, SDK, compilateur, IDE ou projet EPD n'est requis sur le poste utilisateur. Les tests utilisent des registres isolés ; la validation sur le poste du collègue concerné reste à effectuer.
+**Dernière release : [version 0.1.9](https://github.com/BenoitGaltier/altium-revision-retirement/releases/latest)** : vérification des droits du workspace (révision, opération et transition) et modification limitée aux octets de l'entrée de notre extension dans le registre XML. La fenêtre non modale, la recherche par Revision ID, le filtre par dossiers et la conservation des résultats restent disponibles. L'archive Windows contient l'extension compilée et ses deux DLL Altium. Aucun Altium Developer, SDK, compilateur, IDE ou projet EPD n'est requis sur le poste utilisateur. Les tests utilisent des registres isolés ; la validation sur le poste du collègue concerné reste à effectuer.
 
 ## Installation
 
-Télécharger **`altium-revision-retirement-0.1.8-windows-x64.zip`** dans les assets de la [dernière release de ce dépôt](https://github.com/BenoitGaltier/altium-revision-retirement/releases/latest), extraire l'archive, fermer Altium puis lancer dans son dossier. Le téléchargement est accessible sans compte GitHub ni invitation :
+Télécharger **`altium-revision-retirement-0.1.9-windows-x64.zip`** dans les assets de la [dernière release de ce dépôt](https://github.com/BenoitGaltier/altium-revision-retirement/releases/latest), extraire l'archive, fermer Altium puis lancer dans son dossier. Le téléchargement est accessible sans compte GitHub ni invitation :
 
 ```powershell
 .\Install.ps1

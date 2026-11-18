@@ -2,6 +2,8 @@
 
 This package contains the compiled extension. Installation does not run a compiler, MSBuild, a source project or an EPD file.
 
+Version 0.1.9 fixes the global permission lookup used by 0.1.8. The extension now requests the ACL of Altium's native lifecycle operation directly, rather than searching an administrative tree by English labels. Native ACL read failures and unresolved membership have distinct diagnostic messages. No extra DLL, bridge, SDK installation or development tool is required on the target PC.
+
 Version 0.1.8 prepares a byte patch for this extension's entry instead of serializing the complete extension registry. Original bytes outside that entry remain unchanged, including declaration, BOM, encoding, whitespace, attribute order, comments and entity spelling. Installer regressions use isolated registries; validation on the affected workstation remains pending. Preparing or downloading the package does not install it.
 
 The runtime bundle is attached directly to the public release in the original repository. No GitHub account or repository invitation is required to download it. Use of the bundled Altium libraries remains governed by the applicable Altium agreement.
@@ -16,7 +18,7 @@ The installer verifies every bundled file against `manifest.json` and copies the
 
 ## Install
 
-1. Download **`altium-revision-retirement-0.1.8-windows-x64.zip`** from [this repository's release](https://github.com/BenoitGaltier/altium-revision-retirement/releases/tag/v0.1.8). Choose this asset for installation. GitHub's automatic **Source code** archives are for development.
+1. Download **`altium-revision-retirement-0.1.9-windows-x64.zip`** from [this repository's release](https://github.com/BenoitGaltier/altium-revision-retirement/releases/tag/v0.1.9). Choose this asset for installation. GitHub's automatic **Source code** archives are for development.
 2. Extract the complete ZIP. Close Altium Designer normally and handle your own unsaved documents.
 3. Open a 64-bit PowerShell window in the extracted folder and run:
 

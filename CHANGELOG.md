@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.9 — 18 November 2026
+
+- Fix the global permission lookup behind the 0.1.8 message "cannot resolve Library / Move revision between lifecycle states". Read the ACL of Altium's native lifecycle operation GUID directly, instead of enumerating the administrative operation tree and matching English names. Verify the identifier against the installed vendor SDK constant.
+- Preserve native ACL request failure details and distinguish an unavailable ACL from unresolved principals/group membership after a successful read. Redact credential-like values and URLs and bound diagnostic messages; retain the reasons in the existing local scan report.
+- Treat an unavailable organization identifier as unknown only when evaluating an organization grant. Keep configured permission refusals, approval requirements, latest-revision protection and write-time rechecks.
+- Add direct-query, error-reporting, redaction and vendor metadata contract checks. Publish the full compiled installer and English documentation; no additional runtime library or bridge is required. A live check from the affected account remains pending.
+
 ## 0.1.8 — 17 November 2026
 
 - Replace the generic vault write-capability check with native workspace identity, revision edit access, global operation ACL and transition ACL checks. Resolve configured users, groups, organization, Owner and Collaborator; distinguish refusal, unverified rights and approval workflows. Reread permission context before each lifecycle event.

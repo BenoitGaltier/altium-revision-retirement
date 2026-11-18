@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 
 namespace AltiumRevisionRetirement
 {
@@ -14,6 +15,7 @@ namespace AltiumRevisionRetirement
     public sealed class PermissionList
     {
         public bool Read;
+        public string ReadFailure;
         public readonly List<WorkspaceGrant> Grants = new List<WorkspaceGrant>();
     }
     public sealed class WorkspacePermissions
@@ -26,6 +28,19 @@ namespace AltiumRevisionRetirement
     public static class WorkspacePermissionPolicy
     {
         public const string OperationName = "Move revision between lifecycle states";
+        // Altium.Sdk.DxpAppServer.Common.Constants.VaultConstants.AclOperations.LifecycleStateChangeOperationGuid.
+        // Verified in the installed vendor DXPServerSDK metadata; never derived from a localized display name.
+        public const string LifecycleOperationGuid = "01867B2F-6542-4141-B53C-BAA144DDD628";
+        public static PermissionList ReadGlobalOperation(Func<string,PermissionList> readAcl)
+        {
+            try
+            {
+                var result=readAcl(LifecycleOperationGuid);
+                return result ?? new PermissionList {ReadFailure="GetACLEntries: Altium returned no lifecycle operation permission list."};
+            }
+            catch(Exception error)
+            {return new PermissionList {ReadFailure="GetACLEntries: "+PermissionDiagnostics.Summarize(error)};}
+        }
         static PermissionDecision SamePrincipal(string a,string b)
         {
             Guid first, second;
@@ -66,6 +81,8 @@ namespace AltiumRevisionRetirement
         }
         static string Failure(PermissionDecision decision,string denied,string unknown)
         { return decision==PermissionDecision.Allowed ? null : decision==PermissionDecision.Denied ? denied : unknown; }
+        static string ReadFailure(PermissionList acl)
+        { return acl!=null && !string.IsNullOrWhiteSpace(acl.ReadFailure) ? " "+acl.ReadFailure : ""; }
         public static string Reason(Workspace workspace,Item item,Revision revision,Transition transition)
         {
             var user=item.Permissions;
@@ -77,11 +94,26 @@ namespace AltiumRevisionRetirement
             if(!revision.CanUpdate) return "Workspace permission denied: no edit rights on this item revision.";
             var reason=Failure(Evaluate(user.GlobalOperation,user,item.OwnerGuid,revision.CanUpdate),
                 "Workspace permission denied: Library / "+OperationName+".",
-                "Permissions not verified: cannot resolve Library / "+OperationName+" for the active user.");
+                user.GlobalOperation!=null && user.GlobalOperation.Read ?
+                    "Permissions not verified: the global lifecycle ACL was read, but a principal or group membership could not be verified." :
+                    "Permissions not verified: the workspace's lifecycle operation ACL could not be read."+ReadFailure(user.GlobalOperation));
             if(reason!=null) return reason;
             return Failure(Evaluate(transition.Permissions,user,item.OwnerGuid,revision.CanUpdate),
                 "Workspace permission denied: this lifecycle transition does not allow the active user.",
-                "Permissions not verified: the lifecycle transition ACL or group membership could not be read.");
+                "Permissions not verified: the lifecycle transition ACL or group membership could not be read."+ReadFailure(transition.Permissions));
+        }
+    }
+    public static class PermissionDiagnostics
+    {
+        public static string Summarize(Exception error)
+        {
+            var message=error.Message??"";
+            message=Regex.Replace(message,@"https?://[^\s""'<>]+","[URL]",RegexOptions.IgnoreCase);
+            message=Regex.Replace(message,@"\bBearer\s+[^\s""',;]+","Bearer [redacted]",RegexOptions.IgnoreCase);
+            message=Regex.Replace(message,@"\b(?:password|pwd|token|[a-z_]*session[a-z_]*|ticket|authorization)\b[""']?\s*[:=]\s*(?:""[^""]*""|'[^']*'|[^\s;,}]+)","[credential redacted]",RegexOptions.IgnoreCase);
+            message=Regex.Replace(message,@"\s+"," ").Trim();
+            if(message.Length>350) message=message.Substring(0,350)+"...";
+            return error.GetType().Name+": "+message;
         }
     }
 }
